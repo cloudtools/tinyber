@@ -90,3 +90,18 @@ param).
 Now that you have the metadata for each sub-element, you may
 recursively continue decoding each one in turn.  (This could be viewed
 as a form of recursive-descent parser).
+
+Limitations
+-----------
+
+This is not a full BER codec by any stretch: for example it supports
+only definite-length (i.e., actual length is always prepended), and as
+such it can be used for DER encoding as long as care is taken to
+follow the rules.
+
+It does not support INTEGERs larger than a machine int (int64_t by default).
+
+Still missing are direct support for SET, APPLICATION, BITSTRING,
+ENUMERATED, OIDs, etc... though if you are familiar with BER they can be
+implemented with relative ease.
+

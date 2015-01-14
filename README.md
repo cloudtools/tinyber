@@ -87,7 +87,6 @@ in the stream an error will be returned.  If there are less than 50
 the actual number will be set in ``n`` (i.e., ``n`` is an in-out
 param).
 
-
-
-
-
+Now that you have the metadata for each sub-element, you may
+recursively continue decoding each one in turn.  (This could be viewed
+as a form of recursive-descent parser).

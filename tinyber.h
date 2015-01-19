@@ -29,7 +29,7 @@ typedef enum {
 
 typedef struct {
   uint8_t type;
-  int length;
+  unsigned int length;
   uint8_t * value;
 } asn1raw_t;
 

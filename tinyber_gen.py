@@ -20,11 +20,14 @@ class c_node:
             return (self.kind, self.attrs)
 
     def emit (self, out):
-        for sub in self.subs:
-            sub.emit (out)
+        # emit a C type declaration for this node.
+        pass
 
-    def emit (self, out):
-        import pdb; pdb.set_trace()
+    def emit_decode (self, out, lval, src):
+        # out: a c_writer.
+        # lval: a string representing an lval - always a pointer.
+        # src: a string representing the the buf_t* being read from.
+        pass
 
 def csafe (s):
     return s.replace ('-', '_')
@@ -102,7 +105,6 @@ class c_base_type (c_node):
         else:
             import pdb; pdb.set_trace()
 
-        
     tag_map = {
         'OCTET STRING' : 'TAG_OCTETSTRING',
         'UTF8String' : 'TAG_UTF8STRING',

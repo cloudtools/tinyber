@@ -240,7 +240,7 @@ class c_choice (c_node):
         with out.indent():
             for i in range (len (slots)):
                 out.writelines ('%s_PR_%s = %s,' % (name, csafe (slots[i]), tags[i]))
-        out.writelines ('} %s_PR;' % (name,))
+        out.writelines ('} %s_PR;' % (name,), '')
         
     def emit_decode (self, out, lval, src):
         name, slots, tags = self.attrs
@@ -282,7 +282,7 @@ class c_enumerated (c_node):
                     out.writelines ('%s = %s,' % (name, val))
                 else:
                     out.writelines ('%s,' % (name,))
-        out.write ('} ')
+        out.write ('}')
 
     def emit_decode (self, out, lval, src):
         alts, = self.attrs

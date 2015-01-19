@@ -5,6 +5,7 @@
 
 typedef int64_t asn1int_t;
 //typedef int32_t asn1int_t;
+typedef uint8_t asn1bool_t;
 
 typedef enum {
   FLAG_UNIVERSAL   = 0x00,
@@ -20,6 +21,7 @@ typedef enum {
   TAG_OCTETSTRING = 0x04,
   TAG_NULLTAG     = 0x05,
   TAG_OID         = 0x06,
+  TAG_ENUMERATED  = 0x0A,
   TAG_UTF8STRING  = 0x0C,
   TAG_SEQUENCE    = 0x10 | FLAG_STRUCTURED,
   TAG_SET         = 0x11 | FLAG_STRUCTURED
@@ -29,7 +31,7 @@ typedef struct {
   uint8_t type;
   int length;
   uint8_t * value;
-} asn1raw;
+} asn1raw_t;
 
 typedef struct {
   uint8_t * buffer;
@@ -42,11 +44,11 @@ void init_ibuf (buf_t * self, uint8_t * buffer, unsigned int size);
 void init_obuf (buf_t * self, uint8_t * buffer, unsigned int size);
 
 // decoder
-int decode_BOOLEAN (asn1raw * src);
-asn1int_t decode_INTEGER (asn1raw * src);
-int decode_TLV (asn1raw * dst, buf_t * src);
+int decode_BOOLEAN (asn1raw_t * src);
+asn1int_t decode_INTEGER (asn1raw_t * src);
+int decode_TLV (asn1raw_t * dst, buf_t * src);
 int decode_length (buf_t * src, uint32_t * length);
-int decode_structured (asn1raw * src, asn1raw * dst, int * n);
+int decode_structured (asn1raw_t * src, asn1raw_t * dst, int * n);
 
 // encoder
 int encode_TLV (buf_t * o, unsigned int mark, uint8_t tag);

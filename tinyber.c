@@ -226,7 +226,7 @@ decode_length (buf_t * src, uint32_t * length)
     } else {
       CHECK (ensure_input (src, lol));
       uint8_t i;
-      uint32_t n;
+      uint32_t n=0;
       for (i=0; i < lol; i++) {
 	n = (n << 8) | src->buffer[src->pos++];
       }
@@ -240,7 +240,7 @@ decode_length (buf_t * src, uint32_t * length)
 int
 decode_TLV (asn1raw_t * dst, buf_t * src)
 {
-  uint8_t tag, lol;
+  uint8_t tag;
   uint32_t length;
   // 1) get tag
   tag = src->buffer[src->pos++];

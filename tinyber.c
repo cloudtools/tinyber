@@ -238,7 +238,7 @@ decode_length (buf_t * src, uint32_t * length)
 
 
 int
-decode_TLV (asn1raw * dst, buf_t * src)
+decode_TLV (asn1raw_t * dst, buf_t * src)
 {
   uint8_t tag, lol;
   uint32_t length;
@@ -259,7 +259,7 @@ decode_TLV (asn1raw * dst, buf_t * src)
 }
 
 asn1int_t
-decode_INTEGER (asn1raw * src)
+decode_INTEGER (asn1raw_t * src)
 {
   uint8_t length = src->length;
   if (length == 0) {
@@ -283,13 +283,13 @@ decode_INTEGER (asn1raw * src)
 }
 
 int
-decode_BOOLEAN (asn1raw * src)
+decode_BOOLEAN (asn1raw_t * src)
 {
   return (src->value[0] == 0xff);
 }
 
 int
-decode_structured (asn1raw * src, asn1raw * dst, int * n)
+decode_structured (asn1raw_t * src, asn1raw_t * dst, int * n)
 {
   // create a buffer to iterate through the encoded data
   buf_t src0;

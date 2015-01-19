@@ -29,7 +29,7 @@ indent (int n)
 
 static
 void
-dump_tlv (asn1raw * ob)
+dump_tlv (asn1raw_t * ob)
 {
   fprintf (stderr, "{%d %d ", ob->type, ob->length);
   dump_hex (ob->value, ob->length);
@@ -52,7 +52,7 @@ dump_octet_string (uint8_t * s, unsigned int len)
 }
 
 int
-dump (asn1raw * ob, int depth)
+dump (asn1raw_t * ob, int depth)
 {
   indent (depth);
   //dump_tlv (ob);
@@ -70,7 +70,7 @@ dump (asn1raw * ob, int depth)
     fprintf (stderr, "\'\n");
     break;
   case TAG_SEQUENCE: {
-    asn1raw subs[50];
+    asn1raw_t subs[50];
     int n = 50;
     int i;
     CHECK (decode_structured (ob, &subs[0], &n));
@@ -94,7 +94,7 @@ decode_bytes (uint8_t * data, int length)
 {
   buf_t src;
   init_ibuf (&src, data, length);
-  asn1raw dst;
+  asn1raw_t dst;
   fprintf (stderr, "decode ");
   dump_hex (data, length);
   fprintf (stderr, "\n");  

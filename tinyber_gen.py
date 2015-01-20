@@ -1,36 +1,11 @@
 # -*- Mode: Python -*-
 
+import os
 import sys
 import keyword
 from asn1ate import parser
 from asn1ate.support import pygen
 from asn1ate.sema import *
-
-class c_node:
-
-    def __init__ (self, kind, attrs, subs):
-        self.kind = kind
-        self.attrs = attrs
-        self.subs = subs
-
-    def dump (self):
-        if self.subs:
-            return (self.kind, self.attrs, [x.dump() for x in self.subs])
-        else:
-            return (self.kind, self.attrs)
-
-    def emit (self, out):
-        # emit a C type declaration for this node.
-        pass
-
-    def emit_decode (self, out, lval, src):
-        # out: a c_writer.
-        # lval: a string representing an lval - always a pointer.
-        # src: a string representing the the buf_t* being read from.
-        pass
-
-def csafe (s):
-    return s.replace ('-', '_')
 
 class c_writer:
 
@@ -61,6 +36,9 @@ class c_writer:
             self.stream.write ('  ' * self.indent_level)
         self.stream.write (s)
 
+    def close (self):
+        self.stream.close()
+
 def int_max_size_type ( max_size):
     if max_size is None:
         # unconstrained int type.
@@ -75,6 +53,33 @@ def int_max_size_type ( max_size):
         return 'uint64_t'
     else:
         raise NotImplementedError()
+
+class c_node:
+
+    def __init__ (self, kind, attrs, subs):
+        self.kind = kind
+        self.attrs = attrs
+        self.subs = subs
+
+    def dump (self):
+        if self.subs:
+            return (self.kind, self.attrs, [x.dump() for x in self.subs])
+        else:
+            return (self.kind, self.attrs)
+
+    def emit (self, out):
+        # emit a C type declaration for this node.
+        pass
+
+    def emit_decode (self, out, lval, src):
+        # out: a c_writer.
+        # lval: a string representing an lval - always a pointer.
+        # src: a string representing the the buf_t* being read from.
+        pass
+
+def csafe (s):
+    return s.replace ('-', '_')
+
 
 # type grammar
 # type ::= base_type | sequence | sequence_of | choice | enumerated | defined
@@ -119,12 +124,12 @@ class c_base_type (c_node):
     def emit_decode (self, out, lval, src):
         type_name, max_size = self.attrs
         out.writelines (
-            'CHECK (decode_TLV (&tlv, %s))' % (src,),
-            'if (tlv.type != %s) { return -1; }' % (self.tag_map[type_name],),
+            'CHECK (decode_TLV (&tlv, %s));' % (src,),
+            'FAILIF (tlv.type != %s);' % (self.tag_map[type_name],),
         )
         if type_name == 'OCTET STRING' or type_name == 'UTF8String':
             out.writelines (
-                'if (tlv.length > %d) { return -1; }' % (max_size,),
+                'FAILIF(tlv.length > %d);' % (max_size,),
                 'memcpy ((*%s).val, tlv.value, tlv.length);' % (lval,),
                 '(*%s).len = tlv.length;' % (lval,),
                 )
@@ -134,7 +139,7 @@ class c_base_type (c_node):
             )
             if max_size is not None:
                 out.writelines (
-                    'if (intval > %s) { return -1; }' % (max_size,),
+                    'FAILIF(intval > %s);' % (max_size,),
                 )
             out.writelines (
                 '*(%s) = intval;' % (lval,)
@@ -146,6 +151,22 @@ class c_base_type (c_node):
         else:
             import pdb; pdb.set_trace()            
 
+    def emit_encode (self, out, dst, src):
+        type_name, max_size = self.attrs        
+        if type_name == 'OCTET STRING' or type_name == 'UTF8String':
+            out.writelines ('CHECK (encode_OCTET_STRING (%s, (%s)->val, (%s)->len));' % (dst, src, src))
+        elif type_name == 'INTEGER':
+            out.writelines (
+                'intval = *%s;' % (src,),
+                'CHECK (encode_INTEGER (%s, &intval));' % (dst,),
+            )
+        elif type_name == 'BOOLEAN':
+            out.writelines (
+                'boolval = *%s;' % (src,),
+                'CHECK (encode_BOOLEAN (%s, &boolval));' % (dst,),
+            )
+        else:
+            import pdb; pdb.set_trace()
 
 class c_sequence (c_node):
     def __init__ (self, name, pairs):
@@ -169,7 +190,7 @@ class c_sequence (c_node):
         types = self.subs
         out.writelines (
             'CHECK (decode_TLV (&tlv, %s));' % (src,),
-            'if (tlv.type != TAG_SEQUENCE) { return -1; }',
+            'FAILIF (tlv.type != TAG_SEQUENCE);',
             '{'
         )
         with out.indent():
@@ -181,6 +202,19 @@ class c_sequence (c_node):
                 out.writelines ('// slot %s' % (slots[i],))
                 slot_type = types[i]
                 slot_type.emit_decode (out, '&(%s->%s)' % (lval, csafe (slots[i])), '&src0')
+        out.writelines ('}')
+
+    def emit_encode (self, out, dst, src):
+        name, slots = self.attrs
+        types = self.subs
+        out.writelines ('{')
+        with out.indent():
+            out.writelines ('unsigned int mark = %s->pos;' % (dst,))
+            for i in reversed (range (len (slots))):
+                out.writelines ('// slot %s' % (slots[i],))
+                slot_type = types[i]
+                slot_type.emit_encode (out, dst, '&(%s->%s)' % (src, csafe (slots[i])))
+            out.writelines ('CHECK (encode_TLV (%s, mark, TAG_SEQUENCE));' % (dst,))
         out.writelines ('}')
 
 class c_sequence_of (c_node):
@@ -207,15 +241,35 @@ class c_sequence_of (c_node):
                 'buf_t src1;',
                 'int i;'
                 'CHECK (decode_TLV (&tlv, %s));' % (src,),
-                'if (tlv.type != TAG_SEQUENCE) { return -1; }',
+                'FAILIF (tlv.type != TAG_SEQUENCE);',
                 'init_ibuf (&src1, tlv.value, tlv.length);',
                 'for (i=0; (src1.pos < src1.size); i++) {',
             )
             with out.indent():
-                out.writelines ('if (i >= %s) { return -1; }' % (max_size,),)
+                out.writelines ('FAILIF (i >= %s);' % (max_size,),)
                 seq_type.emit_decode (out, '%s.val[i]' % (lval,), '&src1')
-                out.writelines ('(%s)->len = i;' % (lval,))
+                out.writelines ('(%s)->len = i + 1;' % (lval,))
             out.writelines ('}')
+        out.writelines ('}')
+
+    def emit_encode (self, out, dst, src):
+        max_size, = self.attrs
+        [seq_type] = self.subs
+        out.writelines ('{')
+        with out.indent():
+            out.writelines (
+                'int i;',
+                'unsigned int mark = %s->pos;' % (dst,),
+                'int alen = (%s)->len;' % (src,),
+                'for (i=0; i < alen; i++) {',
+            )
+            with out.indent():
+                out.writelines ('FAILIF (i >= %s);' % (max_size,),)
+                seq_type.emit_encode (out, dst, '&((%s)->val[alen-(i+1)])' % (src,))
+            out.writelines (
+                '}',
+                'CHECK (encode_TLV (%s, mark, TAG_SEQUENCE));' % (dst,)
+            )
         out.writelines ('}')
 
 class c_choice (c_node):
@@ -263,13 +317,40 @@ class c_choice (c_node):
                     out.writelines (
                         'case (%s | FLAG_APPLICATION | FLAG_STRUCTURED):' % (tags[i],),
                         '  %s->present = %s_PR_%s;' % (lval, name, tag_name),
-                        '  CHECK (decode_%s (&(%s->choice.%s), &src0))' % (type_name, lval, tag_name),
+                        '  CHECK (decode_%s (&(%s->choice.%s), &src0));' % (type_name, lval, tag_name),
                         '  break;',
                     )
                 out.writelines (
                     'default:', '  return -1;', '  break;'
                 )
             out.writelines ('}')
+        out.writelines ('}')
+
+    def emit_encode (self, out, dst, src):
+        name, slots, tags = self.attrs
+        types = self.subs
+        out.writelines ('{')
+        with out.indent():
+            out.writelines (
+                'unsigned int mark = %s->pos;' % (dst,),
+                'switch (%s->present) {' % (src,),
+            )
+            with out.indent():
+                for i in range (len (slots)):
+                    type_name = types[i].name()
+                    tag_name = csafe (slots[i])
+                    out.writelines (
+                        'case %s:' % (tags[i],),
+                        '  CHECK (encode_%s (%s, &(%s->choice.%s)));' % (type_name, dst, src, tag_name),
+                        '  break;',
+                    )
+                out.writelines (
+                    'default:', '  return -1;', '  break;'
+                )
+            out.writelines (
+                '}',
+                'CHECK (encode_TLV (%s, mark, %s->present | FLAG_APPLICATION | FLAG_STRUCTURED));' % (dst, src),
+            )
         out.writelines ('}')
 
 class c_enumerated (c_node):
@@ -292,8 +373,8 @@ class c_enumerated (c_node):
         out.writelines ('{')
         with out.indent():
             out.writelines (
-                'CHECK (decode_TLV (&tlv, %s))' % (src,),
-                'if (tlv.type != TAG_ENUMERATED) { return -1; }',
+                'CHECK (decode_TLV (&tlv, %s));' % (src,),
+                'FAILIF (tlv.type != TAG_ENUMERATED);',
                 'intval = decode_INTEGER (&tlv);',
                 'switch (intval) {'
                 )
@@ -304,6 +385,13 @@ class c_enumerated (c_node):
             out.writelines ('}')
             out.writelines ('*%s = intval;' % (lval,))
         out.writelines ('}')
+
+    def emit_encode (self, out, dst, src):
+        alts, = self.attrs
+        out.writelines (
+            'intval = *%s;' % (src,),
+            'CHECK (encode_ENUMERATED (%s, &intval));' % (dst,),
+        )
 
 class c_defined (c_node):
     def __init__ (self, name):
@@ -316,14 +404,16 @@ class c_defined (c_node):
         out.write ('%s_t' % (name,), True)
     def emit_decode (self, out, lval, src):
         type_name, = self.attrs
-        out.writelines (
-            'CHECK (decode_%s (%s, %s));' % (type_name, lval, src),
-        )
+        out.writelines ('CHECK (decode_%s (%s, %s));' % (type_name, lval, src),)
+    def emit_encode (self, out, dst, src):
+        type_name, = self.attrs
+        out.writelines ('CHECK (encode_%s (%s, %s));' % (type_name, dst, src),)
         
 class TinyBERBackend(object):
-    def __init__(self, sema_module, out):
+    def __init__(self, sema_module, module_name, base_path):
         self.sema_module = sema_module
-        self.out = c_writer (out)
+        self.module_name = module_name
+        self.base_path = base_path
 
     def gen_ChoiceType (self, ob, name=None):
         alts = []
@@ -410,77 +500,109 @@ class TinyBERBackend(object):
 
     def gen_decoder (self, type_name, type_decl, node):
         # generate a decoder for a type assignment.
-        out = self.out
-        out.writelines (
-            'int',
-            'decode_%s (%s_t * dst, buf_t * src)' % (type_name, type_name),
-            '{',
-        )
-        with self.out.indent():
-            out.writelines (
+        sig = 'int decode_%s (%s_t * dst, buf_t * src)' % (type_name, type_name)
+        self.hout.writelines (sig + ';')
+        self.cout.writelines (sig, '{')
+        with self.cout.indent():
+            self.cout.writelines (
                 'asn1raw_t tlv;',
-                'asn1int_t intval;'
+                'asn1int_t intval;',
             )
-            node.emit_decode (out, 'dst', 'src')
-            out.writelines ('return 0;')
-        out.writelines ('}')
+            node.emit_decode (self.cout, 'dst', 'src')
+            self.cout.writelines ('return 0;')
+        self.cout.writelines ('}', '')
         
+    def gen_encoder (self, type_name, type_decl, node):
+        # generate an encoder for a type assignment
+        sig = 'int encode_%s (buf_t * dst, const %s_t * src)' % (type_name, type_name)
+        self.cout.writelines (sig, '{')
+        self.hout.writelines (sig + ';')
+        with self.cout.indent():
+            self.cout.writelines (
+                'asn1int_t intval;',
+                'asn1bool_t boolval;',
+            )
+            node.emit_encode (self.cout, 'dst', 'src')
+            self.cout.writelines ('return 0;')
+        self.cout.writelines ('}', '')
+
     def gen_codec_funs (self, type_name, type_decl, node):
         self.gen_decoder (type_name, type_decl, node)
-        #self.gen_encoder (type_name, type_decl, node)
+        self.gen_encoder (type_name, type_decl, node)
 
-    def generate_code(self):
-        self.decls = []
+    def generate_code (self):
         self.tag_assignments = {}
         self.defined_types = []
-        W = self.out.writelines
-        W ('', '// generated by %r' % sys.argv, '// *** do not edit ***'  '')
-        W ('#include <stdint.h>')
-        W ('#include <string.h>')
-        W ('#include "tinyber.h"', '')
-        W ('#define CHECK(x) if (-1 == (x)) { return -1; }', '')
-        
+        self.hout = c_writer (open (self.base_path + '.h', 'wb'))
+        self.cout = c_writer (open (self.base_path + '.c', 'wb'))
+        self.hout.writelines (
+            '',
+            '// generated by %r' % sys.argv,
+            '// *** do not edit ***'
+            '',
+            '#include <stdint.h>',
+            '#include <string.h>',
+            '#include "tinyber.h"',
+            '',
+            '#define FAILIF(x) do { if (x) { return -1; } } while(0)',
+            '#define CHECK(x) FAILIF(-1 == (x))',
+            ''
+        )
+        self.cout.writelines (
+            '',
+            '// generated by %r' % sys.argv,
+            '// *** do not edit ***',
+            '',
+            '#include "%s.h"' % (self.module_name,),
+            '',
+        )
+
         assignment_components = dependency_sort (self.sema_module.assignments)
         for component in assignment_components:
             for assignment in component:
                 self.gen_dispatch (assignment)
-        out = self.out
+
+        # generate typedefs and prototypes.
+        out = self.hout
         for (type_name, node, type_decl) in self.defined_types:
             if isinstance (node, c_choice):
                 node.emit_enum (out)
             out.write ('typedef ')
-            node.emit (self.out)
+            node.emit (out)
             out.writelines (' %s_t;' % (type_name,), '')
+
         for (type_name, node, type_decl) in self.defined_types:
             self.gen_codec_funs (type_name, type_decl, node)
-            W ('\n')
-        return self.decls
 
-def generate_tinyber (sema_module, out_stream):
-    backend = TinyBERBackend (sema_module, out_stream)
-    decls = backend.generate_code()
-    return decls
+        self.hout.close()
+        self.cout.close()
 
-def main(args):
-    with open(args[0]) as f:
+def generate_tinyber (sema_module, module_name, base_path):
+    backend = TinyBERBackend (sema_module, module_name, base_path)
+    backend.generate_code()
+
+def main (args):
+
+    with open (args.file) as f:
         asn1def = f.read()
 
     parse_tree = parser.parse_asn1(asn1def)
-
     modules = build_semantic_model(parse_tree)
-
     assert (len(modules) == 1)
+    base, ext = os.path.splitext (args.file)
+    parts = os.path.split (base)
+    module_name = parts[-1]
+    if args.outdir:
+        path = os.path.join (args.outdir, module_name)
+    else:
+        path = base
 
-    decls = generate_tinyber (modules[0], sys.stdout)
-
-    from pprint import pprint as pp
-    for node in decls:
-        #pp (node.dump())
-        #node.emit (sys.stdout)
-        #print ('----------')
-        print()
-
-    return modules[0], decls
+    generate_tinyber (modules[0], module_name, path)
 
 if __name__ == '__main__':
-    m, d = main (sys.argv[1:])
+    import argparse
+    p = argparse.ArgumentParser (description='tinyber code generator.')
+    p.add_argument ('-o', '--outdir', help="output directory (defaults to location of input file)", default='')
+    p.add_argument ('file', help="asn.1 spec", metavar="FILE")
+    args = p.parse_args()
+    main (args)

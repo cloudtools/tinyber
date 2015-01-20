@@ -8,11 +8,8 @@ embedded devices (or anywhere code size is restricted).
 Usage
 -----
 
-TinyBER is designed for ad-hoc encoding and decoding of data, it does
-not use code generation - though it could theoretically be paired with
-a generator.
-
-See the file test.c for examples of how to use the codec.
+TinyBER can be used for ad-hoc encoding and decoding of data, but it
+also comes with a limited code generator.
 
 Buffers
 -------
@@ -102,6 +99,62 @@ follow the rules.
 It does not support INTEGERs larger than a machine int (int64_t by default).
 
 Still missing are direct support for SET, APPLICATION, BITSTRING,
-ENUMERATED, OIDs, etc... though if you are familiar with BER they can be
+OIDs, etc... though if you are familiar with BER they can be
 implemented with relative ease.
+
+
+Code Generation
+---------------
+
+Included is a code generator, ``tinyber_gen.py``, which can generate
+type definitions and BER encoders/decoders for a limited subset of the
+ASN.1 specification language (X.690).
+
+    usage: tinyber_gen.py [-h] [-o OUTDIR] FILE
+    
+    tinyber code generator.
+    
+    positional arguments:
+      FILE                  asn.1 spec
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -o OUTDIR, --outdir OUTDIR
+                            output directory (defaults to location of input file)
+
+
+For example::
+
+    beast:tinyber rushing$ python tinyber_gen.py thing.asn1
+    beast:tinyber rushing$ ls -l thing.[ch]
+    -rw-r--r--  1 rushing  staff  20240 Jan 20 13:08 thing.c
+    -rw-r--r--  1 rushing  staff   4939 Jan 20 13:08 thing.h
+    beast:tinyber rushing$
+
+
+The code generator requires the
+[asn1ate(https://github.com/kimgr/asn1ate) package] to be installed.
+``asn1ate`` is a parser for X.690 designed for use by code generators.
+
+
+Module Design
+-------------
+
+If your goal is to keep your codec as small as possible, a good approach is
+to segregate your packet types into 'server' and 'client' groups.  Otherwise
+the outermost CHOICE PDU will force the inclusion of both server and client
+encoders and decoders on both sides.  If you use two different PDU's, you will
+get only the encoders and decoders needed for each side.  For example::
+
+    ThingModule DEFINITIONS ::= BEGIN
+    
+      ThingClientMessage ::= CHOICE {
+        login-request  [0] LoginRequest,
+        status-request [1] StatusRequest,
+	  }
+	  
+      ThingServerMessage ::= CHOICE {
+          login-reply  [0] LoginReply,
+          status-reply [1] StatusReply
+      }
 

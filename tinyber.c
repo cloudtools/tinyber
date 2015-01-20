@@ -15,21 +15,6 @@
 // [this is the most efficient way to render BER - you write
 //  a sub-object first, then prepend its length and type byte].
 
-void
-init_obuf (buf_t * self, uint8_t * buffer, unsigned int size)
-{
-  self->buffer = buffer;
-  self->pos = size;
-  self->size = size;
-}
-
-void
-init_ibuf (buf_t * self, uint8_t * buffer, unsigned int size)
-{
-  self->buffer = buffer;
-  self->pos = 0;
-  self->size = size;
-}
 
 // emit data <src> (of length <n>) into output buffer <dst>.
 static
@@ -59,8 +44,9 @@ emit_byte (buf_t * self, uint8_t b)
 }
 
 // ensure there are at least <n> bytes of input available.
+static
 int
-ensure_input (buf_t * self, unsigned int n)
+ensure_input (const buf_t * self, unsigned int n)
 {
   if ((self->pos + n) <= self->size) {
     return 0;
@@ -70,8 +56,9 @@ ensure_input (buf_t * self, unsigned int n)
 }
 
 // ensure there are at least <n> bytes of output available.
+static
 int
-ensure_output (buf_t * self, unsigned int n)
+ensure_output (const buf_t * self, unsigned int n)
 {
   if (self->pos >= n) {
     return 0;
@@ -121,8 +108,9 @@ encode_length (asn1int_t len, int n, uint8_t * buffer)
 
 // encode an integer, ASN1 style.
 // two's complement with the minimum number of bytes.
+static
 int
-encode_INTEGER (buf_t * o, asn1int_t n)
+encode_integer (buf_t * o, asn1int_t n)
 {
   asn1int_t n0 = n;
   asn1int_t i = 0;
@@ -151,17 +139,33 @@ encode_INTEGER (buf_t * o, asn1int_t n)
   // for machine-sized ints, lol is one byte, tag is one byte.
   // Note: emit() works in reverse.
   CHECK (emit (o, result + (16 - i), i));  // V
-  CHECK (emit_byte (o, (uint8_t) i));      // L
-  CHECK (emit_byte (o, TAG_INTEGER));      // T
   return 0;
 }
 
 int
-encode_BOOLEAN (buf_t * o, int value)
+encode_INTEGER (buf_t * o, const asn1int_t * n)
+{
+  unsigned int mark = o->pos;
+  encode_integer (o, *n);
+  CHECK (encode_TLV (o, mark, TAG_INTEGER));
+  return 0;
+}
+
+int
+encode_ENUMERATED (buf_t * o, const asn1int_t * n)
+{
+  unsigned int mark = o->pos;
+  encode_integer (o, *n);
+  CHECK (encode_TLV (o, mark, TAG_ENUMERATED));
+  return 0;
+}
+
+int
+encode_BOOLEAN (buf_t * o, const asn1bool_t * value)
 {
   static const uint8_t encoded_bool_true[3]  = {0x01, 0x01, 0xff};
   static const uint8_t encoded_bool_false[3] = {0x01, 0x01, 0x00};
-  if (value) {
+  if (*value) {
     CHECK (emit (o, encoded_bool_true, sizeof(encoded_bool_true)));
   } else {
     CHECK (emit (o, encoded_bool_false, sizeof(encoded_bool_false)));
@@ -170,7 +174,7 @@ encode_BOOLEAN (buf_t * o, int value)
 }
 
 int
-encode_OCTET_STRING (buf_t * o, uint8_t * src, int src_len)
+encode_OCTET_STRING (buf_t * o, const uint8_t * src, int src_len)
 {
   int mark = o->pos;
   CHECK (emit (o, src, src_len));
@@ -286,27 +290,4 @@ int
 decode_BOOLEAN (asn1raw_t * src)
 {
   return (src->value[0] == 0xff);
-}
-
-int
-decode_structured (asn1raw_t * src, asn1raw_t * dst, int * n)
-{
-  // create a buffer to iterate through the encoded data
-  buf_t src0;
-  init_ibuf (&src0, src->value, src->length);
-  int i = 0;
-  while (1) {
-    if (i > *n) {
-      // too many elements.
-      return -1;
-    } else if (src0.pos == src0.size) {
-      break;
-    }
-    // unwrap TLV for each element.
-    CHECK (decode_TLV (&dst[i], &src0));
-    i++;
-  }
-  // tell the caller how many entries were present.
-  *n = i;
-  return 0;
 }

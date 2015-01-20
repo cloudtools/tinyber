@@ -40,20 +40,36 @@ typedef struct {
 } buf_t;
 
 // buffer interface
-void init_ibuf (buf_t * self, uint8_t * buffer, unsigned int size);
-void init_obuf (buf_t * self, uint8_t * buffer, unsigned int size);
+
+inline
+void
+init_obuf (buf_t * self, uint8_t * buffer, unsigned int size)
+{
+  self->buffer = buffer;
+  self->pos = size;
+  self->size = size;
+}
+
+inline
+void
+init_ibuf (buf_t * self, uint8_t * buffer, unsigned int size)
+{
+  self->buffer = buffer;
+  self->pos = 0;
+  self->size = size;
+}
 
 // decoder
 int decode_BOOLEAN (asn1raw_t * src);
 asn1int_t decode_INTEGER (asn1raw_t * src);
 int decode_TLV (asn1raw_t * dst, buf_t * src);
 int decode_length (buf_t * src, uint32_t * length);
-int decode_structured (asn1raw_t * src, asn1raw_t * dst, int * n);
 
 // encoder
 int encode_TLV (buf_t * o, unsigned int mark, uint8_t tag);
-int encode_INTEGER (buf_t * o, asn1int_t n);
-int encode_BOOLEAN (buf_t * o, int value);
-int encode_OCTET_STRING (buf_t * o, uint8_t * src, int src_len);
+int encode_INTEGER (buf_t * o, const asn1int_t * n);
+int encode_BOOLEAN (buf_t * o, const asn1bool_t * value);
+int encode_OCTET_STRING (buf_t * o, const uint8_t * src, int src_len);
+int encode_ENUMERATED (buf_t * o, const asn1int_t * n);
 
 #endif // _TINYBER_H_

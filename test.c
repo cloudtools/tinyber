@@ -6,7 +6,31 @@
 
 #include "tinyber.h"
 
-#define CHECK(x) if ((x) == -1) { return -1; }
+#define CHECK(x) do { if ((x) == -1) { return -1; } } while (0)
+
+int
+decode_structured (const asn1raw_t * src, asn1raw_t * dst, int * n)
+{
+  // create a buffer to iterate through the encoded data
+  buf_t src0;
+  init_ibuf (&src0, src->value, src->length);
+  int i = 0;
+  while (1) {
+    if (i > *n) {
+      // too many elements.
+      return -1;
+    } else if (src0.pos == src0.size) {
+      break;
+    }
+    // unwrap TLV for each element.
+    CHECK (decode_TLV (&dst[i], &src0));
+    i++;
+  }
+  // tell the caller how many entries were present.
+  *n = i;
+  return 0;
+}
+
 
 static
 void
@@ -108,7 +132,6 @@ decode_bytes (uint8_t * data, int length)
   }
 }
 
-
 int
 test_decoder (void)
 {
@@ -125,6 +148,8 @@ test_decoder (void)
 int
 test_encoder (void)
 {
+  asn1int_t n = -3141;
+  asn1bool_t q = 0;
   fprintf (stderr, "\n--- testing encoder ---\n");
   uint8_t buffer[512];
   buf_t obuf;
@@ -134,10 +159,11 @@ test_encoder (void)
   
   // [-3141, False, ['abc', 'def', 'ghi'], 3735928559, 'Mary had a little lamb. I ate it with a mint sauce.']
 
+  n = 0xdeadbeef;
   int mark = obuf.pos;
   uint8_t msg[] = "Mary had a little lamb. I ate it with a mint sauce.";
   CHECK (encode_OCTET_STRING (&obuf, msg, sizeof(msg) - 1)); // elide NUL
-  CHECK (encode_INTEGER (&obuf, 0xdeadbeef));
+  CHECK (encode_INTEGER (&obuf, &n));
 
   int mark0 = obuf.pos;
   CHECK (encode_OCTET_STRING (&obuf, (uint8_t *) "ghi", 3));
@@ -145,8 +171,9 @@ test_encoder (void)
   CHECK (encode_OCTET_STRING (&obuf, (uint8_t *) "abc", 3));
   CHECK (encode_TLV (&obuf, mark0, TAG_SEQUENCE));
 
-  CHECK (encode_BOOLEAN (&obuf, 0));
-  CHECK (encode_INTEGER (&obuf, -3141));
+  n = -3141;
+  CHECK (encode_BOOLEAN (&obuf, &q));
+  CHECK (encode_INTEGER (&obuf, &n));
   CHECK (encode_TLV (&obuf, mark, TAG_SEQUENCE));
 
   int length = mark - obuf.pos;

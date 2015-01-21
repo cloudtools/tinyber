@@ -107,6 +107,8 @@ class c_base_type (c_node):
             out.write ('asn1bool_t', True)
         elif type_name == 'INTEGER':
             out.write (int_max_size_type (max_size), True)
+        elif type_name == 'NULL':
+            pass
         else:
             import pdb; pdb.set_trace()
 
@@ -115,6 +117,7 @@ class c_base_type (c_node):
         'UTF8String' : 'TAG_UTF8STRING',
         'INTEGER' : 'TAG_INTEGER',
         'BOOLEAN' : 'TAG_BOOLEAN',
+        'NULL' : 'TAG_NULL',
     }
 
     def tag_name (self):
@@ -134,20 +137,14 @@ class c_base_type (c_node):
                 '(*%s).len = tlv.length;' % (lval,),
                 )
         elif type_name == 'INTEGER':
-            out.writelines (
-                'intval = decode_INTEGER (&tlv);',
-            )
+            out.writelines ('intval = decode_INTEGER (&tlv);',)
             if max_size is not None:
-                out.writelines (
-                    'FAILIF(intval > %s);' % (max_size,),
-                )
-            out.writelines (
-                '*(%s) = intval;' % (lval,)
-            )
+                out.writelines ('FAILIF(intval > %s);' % (max_size,),)
+            out.writelines ('*(%s) = intval;' % (lval,))
         elif type_name == 'BOOLEAN':
-            out.writelines (
-                '*(%s) = decode_BOOLEAN (&tlv);' % (lval,),
-            )
+            out.writelines ('*(%s) = decode_BOOLEAN (&tlv);' % (lval,),)
+        elif type_name == 'NULL':
+            pass
         else:
             import pdb; pdb.set_trace()            
 
@@ -165,6 +162,8 @@ class c_base_type (c_node):
                 'boolval = *%s;' % (src,),
                 'CHECK (encode_BOOLEAN (%s, &boolval));' % (dst,),
             )
+        elif type_name == 'NULL':
+            out.writelines ('encode_NULL (%s)' % (dst,))
         else:
             import pdb; pdb.set_trace()
 

@@ -2,8 +2,10 @@
 TinyBER
 =======
 
-TinyBER is a very small, limited ASN.1 BER codec meant for use on
-embedded devices (or anywhere code size is restricted).
+TinyBER is a very small, limited ASN.1 BER codec and code generator
+meant for use on embedded devices (or anywhere code size is
+restricted).  The generated code uses fixed-size structures and makes
+no calls to malloc or free.
 
 Usage
 -----
@@ -102,6 +104,18 @@ Still missing are direct support for SET, APPLICATION, BITSTRING,
 OIDs, etc... though if you are familiar with BER they can be
 implemented with relative ease.
 
+Because tinyber requires fixed-sized elements for all structures (to
+avoid malloc & free), using recursive (or mutually recursive) types is
+impossible::
+
+    List ::= SEQUENCE {
+        car INTEGER,
+	    cdr List OPTIONAL
+    }
+
+Tinyber can't make a fixed-sized structure that might hold a
+potentially infinite list, so it cannot handle this kind of
+construction.
 
 Code Generation
 ---------------

@@ -108,7 +108,7 @@ Code Generation
 
 Included is a code generator, ``tinyber_gen.py``, which can generate
 type definitions and BER encoders/decoders for a limited subset of the
-ASN.1 specification language (X.690).
+ASN.1 specification language (X.680).
 
     usage: tinyber_gen.py [-h] [-o OUTDIR] FILE
     
@@ -134,7 +134,7 @@ For example::
 
 The code generator requires the
 [asn1ate(https://github.com/kimgr/asn1ate) package] to be installed.
-``asn1ate`` is a parser for X.690 designed for use by code generators.
+``asn1ate`` is a parser for X.680 designed for use by code generators.
 
 
 Module Design

@@ -17,7 +17,7 @@ main (int argc, char * argv[])
   uint8_t buffer[1024];
   init_obuf (&obuf, buffer, sizeof(buffer));
   
-  for (int64_t i=0; i <= INT32_MAX; i++) {
+  for (int64_t i=INT32_MIN; i <= INT32_MAX; i++) {
 
     if ((i % 1000000) == 0) {
       fprintf (stderr, ".");

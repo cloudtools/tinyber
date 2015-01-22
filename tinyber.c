@@ -5,7 +5,8 @@
 #include <stdint.h>
 #include "tinyber.h"
 
-#define CHECK(x) if ((x) == -1) { return -1; }
+#define FAILIF(x) do { if (x) { return -1; } } while(0)
+#define CHECK(x) FAILIF(-1 == (x))
 
 // --------------------------------------------------------------------------------
 //  buffer interface
@@ -14,7 +15,6 @@
 // output buffers are written in reverse, using predecrement.
 // [this is the most efficient way to render BER - you write
 //  a sub-object first, then prepend its length and type byte].
-
 
 // emit data <src> (of length <n>) into output buffer <dst>.
 static

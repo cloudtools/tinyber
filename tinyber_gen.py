@@ -90,11 +90,11 @@ def csafe (s):
 # enumerated ::= (name, val)+
 
 class c_base_type (c_node):
-    def __init__ (self, name, max_size=None):
-        c_node.__init__ (self, 'base_type', (name, max_size), [])
+    def __init__ (self, name, min_size=None, max_size=None):
+        c_node.__init__ (self, 'base_type', (name, min_size, max_size), [])
         
     def emit (self, out):
-        type_name, max_size = self.attrs
+        type_name, min_size, max_size = self.attrs
         if type_name == 'OCTET STRING' or type_name == 'UTF8String':
             out.writelines ('struct {')
             with out.indent():
@@ -121,11 +121,11 @@ class c_base_type (c_node):
     }
 
     def tag_name (self):
-        type_name, max_size = self.attrs
+        type_name, min_size, max_size = self.attrs
         return self.tag_map[type_name]
 
     def emit_decode (self, out, lval, src):
-        type_name, max_size = self.attrs
+        type_name, min_size, max_size = self.attrs
         out.writelines (
             'CHECK (decode_TLV (&tlv, %s));' % (src,),
             'FAILIF (tlv.type != %s);' % (self.tag_map[type_name],),
@@ -140,6 +140,8 @@ class c_base_type (c_node):
             out.writelines ('intval = decode_INTEGER (&tlv);',)
             if max_size is not None:
                 out.writelines ('FAILIF(intval > %s);' % (max_size,),)
+            if min_size is not None:
+                out.writelines ('FAILIF(intval < %s);' % (min_size,),)
             out.writelines ('*(%s) = intval;' % (lval,))
         elif type_name == 'BOOLEAN':
             out.writelines ('*(%s) = decode_BOOLEAN (&tlv);' % (lval,),)
@@ -149,7 +151,7 @@ class c_base_type (c_node):
             import pdb; pdb.set_trace()            
 
     def emit_encode (self, out, dst, src):
-        type_name, max_size = self.attrs        
+        type_name, min_size, max_size = self.attrs
         if type_name == 'OCTET STRING' or type_name == 'UTF8String':
             out.writelines ('CHECK (encode_OCTET_STRING (%s, (%s)->val, (%s)->len));' % (dst, src, src))
         elif type_name == 'INTEGER':
@@ -201,6 +203,7 @@ class c_sequence (c_node):
                 out.writelines ('// slot %s' % (slots[i],))
                 slot_type = types[i]
                 slot_type.emit_decode (out, '&(%s->%s)' % (lval, csafe (slots[i])), '&src0')
+            out.writelines ('FAILIF (src0.pos != src0.size);')
         out.writelines ('}')
 
     def emit_encode (self, out, dst, src):
@@ -217,11 +220,11 @@ class c_sequence (c_node):
         out.writelines ('}')
 
 class c_sequence_of (c_node):
-    def __init__ (self, seq_type, max_size):
-        c_node.__init__ (self, 'sequence_of', (max_size,), [seq_type])
+    def __init__ (self, seq_type, min_size, max_size):
+        c_node.__init__ (self, 'sequence_of', (min_size, max_size,), [seq_type])
 
     def emit (self, out):
-        max_size, = self.attrs
+        min_size, max_size, = self.attrs
         [seq_type] = self.subs
         out.writelines ('struct {')
         with out.indent():
@@ -232,16 +235,17 @@ class c_sequence_of (c_node):
         out.write ('}', True)
 
     def emit_decode (self, out, lval, src):
-        max_size, = self.attrs
+        min_size, max_size, = self.attrs
         [seq_type] = self.subs
         out.writelines ('{')
         with out.indent():
             out.writelines (
                 'buf_t src1;',
-                'int i;'
+                'int i;',
                 'CHECK (decode_TLV (&tlv, %s));' % (src,),
                 'FAILIF (tlv.type != TAG_SEQUENCE);',
                 'init_ibuf (&src1, tlv.value, tlv.length);',
+                '(%s)->len = 0;' % (lval,),
                 'for (i=0; (src1.pos < src1.size); i++) {',
             )
             with out.indent():
@@ -249,10 +253,12 @@ class c_sequence_of (c_node):
                 seq_type.emit_decode (out, '%s.val[i]' % (lval,), '&src1')
                 out.writelines ('(%s)->len = i + 1;' % (lval,))
             out.writelines ('}')
+            if min_size:
+                out.writelines ('FAILIF ((%s)->len != %d);' % (lval, min_size))
         out.writelines ('}')
 
     def emit_encode (self, out, dst, src):
-        max_size, = self.attrs
+        min_size, max_size, = self.attrs
         [seq_type] = self.subs
         out.writelines ('{')
         with out.indent():
@@ -435,20 +441,20 @@ class TinyBERBackend(object):
             slots.append ((slot_name, slot_type))
         return c_sequence (name, slots)
 
-    def constraint_get_max_size (self, ob):
+    def constraint_get_min_max_size (self, ob):
         if isinstance (ob, SizeConstraint):
-            return self.constraint_get_max_size (ob.nested)
+            return self.constraint_get_min_max_size (ob.nested)
         elif isinstance (ob, SingleValueConstraint):
-            return int (ob.value)
+            return int (ob.value), int (ob.value)
         elif isinstance (ob, ValueRangeConstraint):
-            return int (ob.max_value)
+            return int (ob.min_value), int (ob.max_value)
         else:
             raise NotImplementedError ("testing")
 
     def gen_SequenceOfType (self, ob):
-        max_size = self.constraint_get_max_size (ob.size_constraint)
+        min_size, max_size = self.constraint_get_min_max_size (ob.size_constraint)
         array_type = self.gen_dispatch (ob.type_decl)
-        return c_sequence_of (array_type, max_size)
+        return c_sequence_of (array_type, min_size, max_size)
 
     def gen_TaggedType (self, ob):
         # XXX for now, only support [APPLICATION X] SEQUENCE {}
@@ -472,10 +478,10 @@ class TinyBERBackend(object):
 
     def gen_SimpleType (self, ob):
         if ob.constraint:
-            max_size = self.constraint_get_max_size (ob.constraint)
+            min_size, max_size = self.constraint_get_min_max_size (ob.constraint)
         else:
-            max_size = None
-        return c_base_type (ob.type_name, max_size)
+            min_size, max_size = None, None
+        return c_base_type (ob.type_name, min_size, max_size)
 
     def gen_ValueListType (self, ob):
         alts = []

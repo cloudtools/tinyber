@@ -53,6 +53,8 @@ def gen_msgb():
         (SEQUENCE (INTEGER (1001), BOOLEAN(False), SEQUENCE(BOOLEAN(True), BOOLEAN(False), BOOLEAN(True)), gy), False),
         # < 1 y
         (SEQUENCE (INTEGER (1001), BOOLEAN(False), SEQUENCE(), SEQUENCE()), False),
+        # out of range in y
+        (SEQUENCE (INTEGER (1001), BOOLEAN(False), SEQUENCE(), SEQUENCE (INTEGER (1), INTEGER (1001))), False),
         # extra data
         (SEQUENCE (INTEGER (1001), BOOLEAN(False), SEQUENCE(), BOOLEAN(True), OCTET_STRING ("asdfasdfasdfasdfasdfasdfasdfasdfasdf")), False),
         # not enough data

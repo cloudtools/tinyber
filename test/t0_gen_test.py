@@ -38,18 +38,24 @@ def gen_color():
         ]
     
 def gen_msgb():
+    gx = SEQUENCE()
+    gy = SEQUENCE (INTEGER (1))
     return [
-        (SEQUENCE (INTEGER (1001), BOOLEAN(True), SEQUENCE()), True),
-        (SEQUENCE (INTEGER (1<<30), BOOLEAN(True), SEQUENCE()), True),
-        (SEQUENCE (INTEGER (1001), BOOLEAN(False), SEQUENCE()), True),
+        (SEQUENCE (INTEGER (1001), BOOLEAN(True), gx, gy), True),
+        (SEQUENCE (INTEGER (1<<30), BOOLEAN(True), gx, gy), True),
+        (SEQUENCE (INTEGER (1001), BOOLEAN(False), gx, gy), True),
+        (SEQUENCE (INTEGER (1001), BOOLEAN(False), SEQUENCE(), SEQUENCE (INTEGER (1), INTEGER (2))), True),
         # exactly one x
-        (SEQUENCE (INTEGER (1001), BOOLEAN(False), SEQUENCE(BOOLEAN(True))), True),
+        (SEQUENCE (INTEGER (1001), BOOLEAN(False), SEQUENCE(BOOLEAN(True)), gy), True),
         # exactly two x
-        (SEQUENCE (INTEGER (1001), BOOLEAN(False), SEQUENCE(BOOLEAN(True), BOOLEAN(False))), True),
+        (SEQUENCE (INTEGER (1001), BOOLEAN(False), SEQUENCE(BOOLEAN(True), BOOLEAN(False)), gy), True),
         # too many x
-        (SEQUENCE (INTEGER (1001), BOOLEAN(False), SEQUENCE(BOOLEAN(True), BOOLEAN(False), BOOLEAN(True))), False),
+        (SEQUENCE (INTEGER (1001), BOOLEAN(False), SEQUENCE(BOOLEAN(True), BOOLEAN(False), BOOLEAN(True)), gy), False),
+        # < 1 y
+        (SEQUENCE (INTEGER (1001), BOOLEAN(False), SEQUENCE(), SEQUENCE()), False),
         # extra data
         (SEQUENCE (INTEGER (1001), BOOLEAN(False), SEQUENCE(), BOOLEAN(True), OCTET_STRING ("asdfasdfasdfasdfasdfasdfasdfasdfasdf")), False),
+        # not enough data
         (SEQUENCE (BOOLEAN(False), BOOLEAN(True)), False),
         (INTEGER (99), False),
         ('ksdjfkjwekrjasdf', False),

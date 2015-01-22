@@ -254,7 +254,7 @@ class c_sequence_of (c_node):
                 out.writelines ('(%s)->len = i + 1;' % (lval,))
             out.writelines ('}')
             if min_size:
-                out.writelines ('FAILIF ((%s)->len != %d);' % (lval, min_size))
+                out.writelines ('FAILIF ((%s)->len < %d);' % (lval, min_size))
         out.writelines ('}')
 
     def emit_encode (self, out, dst, src):

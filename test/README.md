@@ -11,13 +11,13 @@ Usage
 
 1. generate t0.[ch] from t0.asn.
 
-    python ../tinyber_gen.py t0.asn
+    ``python ../tinyber_gen.py t0.asn``
 
 2. build the cython extension.
 
-    python setup.py build_ext --inplace
+    ``python setup.py build_ext --inplace``
 
 3. run the test.
 
-    python t0_gen_test.py
+    ``python t0_gen_test.py``
 

@@ -71,5 +71,6 @@ int encode_INTEGER (buf_t * o, const asn1int_t * n);
 int encode_BOOLEAN (buf_t * o, const asn1bool_t * value);
 int encode_OCTET_STRING (buf_t * o, const uint8_t * src, int src_len);
 int encode_ENUMERATED (buf_t * o, const asn1int_t * n);
+int encode_NULL (buf_t * o);
 
 #endif // _TINYBER_H_

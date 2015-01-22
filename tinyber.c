@@ -174,6 +174,13 @@ encode_BOOLEAN (buf_t * o, const asn1bool_t * value)
 }
 
 int
+encode_NULL (buf_t * o)
+{
+  static const uint8_t encoded_null[2] = {0x05, 0x00};
+  CHECK (emit (o, encoded_null, sizeof(encoded_null)));
+}
+
+int
 encode_OCTET_STRING (buf_t * o, const uint8_t * src, int src_len)
 {
   int mark = o->pos;

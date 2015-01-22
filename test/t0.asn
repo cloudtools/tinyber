@@ -1,0 +1,41 @@
+-- -*- Mode: asn1; indent-tabs-mode: nil -*-
+
+-- test module meant to exercise all supported features of tinyber_gen.py
+
+ThingModule DEFINITIONS ::= BEGIN
+    
+    StringThing ::= OCTET STRING SIZE (5)
+    
+    ThingMsg ::= CHOICE {
+        msg-a  [0] MsgA,
+	msg-b  [1] MsgB
+    }
+
+    Pair ::= SEQUENCE {
+        a INTEGER (0..255),
+	b INTEGER (100..200)
+    }
+
+    Color ::= ENUMERATED {
+        red (0),
+	blue (1),
+	green (2)
+    }
+
+    MsgA ::= SEQUENCE {
+        toctet  OCTET STRING SIZE (0..10),
+	t8int   INTEGER (0..255),
+	t16int  INTEGER (0..16385),
+	t32int  INTEGER (0..4294967295),
+	tarray  SEQUENCE SIZE (4) OF Pair,
+	tbool   BOOLEAN,
+	tenum   Color
+    }
+
+    MsgB ::= SEQUENCE {
+        a INTEGER,
+	b BOOLEAN,
+	x SEQUENCE SIZE (0..2) OF BOOLEAN
+    }
+
+END

@@ -584,7 +584,7 @@ class TinyBERBackend(object):
 
         self.hout.writelines (
             '',
-            '#endif _%s_H_' % self.module_name.upper()
+            '#endif // _%s_H_' % self.module_name.upper()
         )
         self.hout.close()
         self.cout.close()

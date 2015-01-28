@@ -5,8 +5,23 @@ import os
 import sys
 import keyword
 from asn1ate import parser
-from asn1ate.support import pygen
 from asn1ate.sema import *
+
+class indent_context:
+
+    def __init__ (self, writer, scope=False):
+        self.writer = writer
+        self.scope = scope
+
+    def __enter__ (self):
+        if self.scope:
+            self.writer.writelines ('{')
+        self.writer.indent_level += 1
+        
+    def __exit__ (self, t, v, tb):
+        self.writer.indent_level -= 1
+        if self.scope:
+            self.writer.writelines ('}')
 
 class c_writer:
 
@@ -15,14 +30,11 @@ class c_writer:
         self.indent_level = 0
 
     def indent (self):
-        return self
+        return indent_context (self, False)
 
-    def __enter__ (self):
-        self.indent_level += 1
-
-    def __exit__ (self, t, v, tb):
-        self.indent_level -= 1
-
+    def scope (self):
+        return indent_context (self, True)
+        
     def writelines (self, *lines):
         for line in lines:
             self.stream.write ('  ' * self.indent_level)
@@ -138,12 +150,13 @@ class c_base_type (c_node):
                 '(*%s).len = tlv.length;' % (lval,),
                 )
         elif type_name == 'INTEGER':
-            out.writelines ('intval = decode_INTEGER (&tlv);',)
-            if max_size is not None:
-                out.writelines ('FAILIF(intval > %s);' % (max_size,),)
-            if min_size is not None:
-                out.writelines ('FAILIF(intval < %s);' % (min_size,),)
-            out.writelines ('*(%s) = intval;' % (lval,))
+            with out.scope():
+                out.writelines ('asn1int_t intval = decode_INTEGER (&tlv);',)
+                if max_size is not None:
+                    out.writelines ('FAILIF(intval > %s);' % (max_size,),)
+                if min_size is not None:
+                    out.writelines ('FAILIF(intval < %s);' % (min_size,),)
+                out.writelines ('*(%s) = intval;' % (lval,))
         elif type_name == 'BOOLEAN':
             out.writelines ('*(%s) = decode_BOOLEAN (&tlv);' % (lval,),)
         elif type_name == 'NULL':
@@ -156,15 +169,17 @@ class c_base_type (c_node):
         if type_name == 'OCTET STRING' or type_name == 'UTF8String':
             out.writelines ('CHECK (encode_OCTET_STRING (%s, (%s)->val, (%s)->len));' % (dst, src, src))
         elif type_name == 'INTEGER':
-            out.writelines (
-                'intval = *%s;' % (src,),
-                'CHECK (encode_INTEGER (%s, &intval));' % (dst,),
-            )
+            with out.scope():
+                out.writelines (
+                    'asn1int_t intval = *%s;' % (src,),
+                    'CHECK (encode_INTEGER (%s, &intval));' % (dst,),
+                )
         elif type_name == 'BOOLEAN':
-            out.writelines (
-                'boolval = *%s;' % (src,),
-                'CHECK (encode_BOOLEAN (%s, &boolval));' % (dst,),
-            )
+            with out.scope():
+                out.writelines (
+                    'asn1bool_t boolval = *%s;' % (src,),
+                    'CHECK (encode_BOOLEAN (%s, &boolval));' % (dst,),
+                )
         elif type_name == 'NULL':
             out.writelines ('encode_NULL (%s)' % (dst,))
         else:
@@ -381,23 +396,27 @@ class c_enumerated (c_node):
             out.writelines (
                 'CHECK (decode_TLV (&tlv, %s));' % (src,),
                 'FAILIF (tlv.type != TAG_ENUMERATED);',
-                'intval = decode_INTEGER (&tlv);',
-                'switch (intval) {'
+            )
+            with out.scope():
+                out.writelines (
+                    'asn1int_t intval = decode_INTEGER (&tlv);',
+                    'switch (intval) {'
                 )
-            with out.indent():
-                for name, val in alts:
-                    out.writelines ('case %s: break;' % (val,))
-                out.writelines ('default: return -1;')
-            out.writelines ('}')
-            out.writelines ('*%s = intval;' % (lval,))
+                with out.indent():
+                    for name, val in alts:
+                        out.writelines ('case %s: break;' % (val,))
+                    out.writelines ('default: return -1;')
+                out.writelines ('}')
+                out.writelines ('*%s = intval;' % (lval,))
         out.writelines ('}')
 
     def emit_encode (self, out, dst, src):
         alts, = self.attrs
-        out.writelines (
-            'intval = *%s;' % (src,),
-            'CHECK (encode_ENUMERATED (%s, &intval));' % (dst,),
-        )
+        with out.scope():
+            out.writelines (
+                'asn1int_t intval = *%s;' % (src,),
+                'CHECK (encode_ENUMERATED (%s, &intval));' % (dst,),
+            )
 
 class c_defined (c_node):
     def __init__ (self, name):
@@ -512,7 +531,6 @@ class TinyBERBackend(object):
         with self.cout.indent():
             self.cout.writelines (
                 'asn1raw_t tlv;',
-                'asn1int_t intval;',
             )
             node.emit_decode (self.cout, 'dst', 'src')
             self.cout.writelines ('return 0;')
@@ -524,10 +542,6 @@ class TinyBERBackend(object):
         self.cout.writelines (sig, '{')
         self.hout.writelines (sig + ';')
         with self.cout.indent():
-            self.cout.writelines (
-                'asn1int_t intval;',
-                'asn1bool_t boolval;',
-            )
             node.emit_encode (self.cout, 'dst', 'src')
             self.cout.writelines ('return 0;')
         self.cout.writelines ('}', '')

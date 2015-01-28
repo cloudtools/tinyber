@@ -578,6 +578,10 @@ class TinyBERBackend(object):
             '',
             '#include "%s.h"' % (self.module_name,),
             '',
+            # needed for the inline defs when compiled with inlining disabled.
+            'extern void init_obuf (buf_t * self, uint8_t * buffer, unsigned int size);',
+            'extern void init_ibuf (buf_t * self, uint8_t * buffer, unsigned int size);',
+            '',
         )
 
         assignment_components = dependency_sort (self.sema_module.assignments)

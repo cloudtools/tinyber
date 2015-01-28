@@ -6,6 +6,8 @@ The file ``t0.asn`` is meant to cover all the supported features of tinyber.
 The file ``t0_gen_test.py`` auto-generates over 3000 tests in an attempt to
 cover every possible error case.
 
+Note: t0_gen_test.py requires [shrapnel](https://github.com/ironport/shrapnel) for its BER codec.
+
 Usage
 -----
 

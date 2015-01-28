@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- Mode: Python -*-
 
 import os

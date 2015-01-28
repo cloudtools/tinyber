@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include "tinyber.h"
 
-#define FAILIF(x) do { if (x) { return -1; } } while(0)
-#define CHECK(x) FAILIF(-1 == (x))
+#define TYB_FAILIF(x) do { if (x) { return -1; } } while(0)
+#define TYB_CHECK(x) TYB_FAILIF(-1 == (x))
 
 // --------------------------------------------------------------------------------
 //  buffer interface
@@ -138,7 +138,7 @@ encode_integer (buf_t * o, asn1int_t n)
   }
   // for machine-sized ints, lol is one byte, tag is one byte.
   // Note: emit() works in reverse.
-  CHECK (emit (o, result + (16 - i), i));  // V
+  TYB_CHECK (emit (o, result + (16 - i), i));  // V
   return 0;
 }
 
@@ -147,7 +147,7 @@ encode_INTEGER (buf_t * o, const asn1int_t * n)
 {
   unsigned int mark = o->pos;
   encode_integer (o, *n);
-  CHECK (encode_TLV (o, mark, TAG_INTEGER));
+  TYB_CHECK (encode_TLV (o, mark, TAG_INTEGER));
   return 0;
 }
 
@@ -156,7 +156,7 @@ encode_ENUMERATED (buf_t * o, const asn1int_t * n)
 {
   unsigned int mark = o->pos;
   encode_integer (o, *n);
-  CHECK (encode_TLV (o, mark, TAG_ENUMERATED));
+  TYB_CHECK (encode_TLV (o, mark, TAG_ENUMERATED));
   return 0;
 }
 
@@ -166,9 +166,9 @@ encode_BOOLEAN (buf_t * o, const asn1bool_t * value)
   static const uint8_t encoded_bool_true[3]  = {0x01, 0x01, 0xff};
   static const uint8_t encoded_bool_false[3] = {0x01, 0x01, 0x00};
   if (*value) {
-    CHECK (emit (o, encoded_bool_true, sizeof(encoded_bool_true)));
+    TYB_CHECK (emit (o, encoded_bool_true, sizeof(encoded_bool_true)));
   } else {
-    CHECK (emit (o, encoded_bool_false, sizeof(encoded_bool_false)));
+    TYB_CHECK (emit (o, encoded_bool_false, sizeof(encoded_bool_false)));
   }
   return 0;
 }
@@ -177,15 +177,15 @@ int
 encode_NULL (buf_t * o)
 {
   static const uint8_t encoded_null[2] = {0x05, 0x00};
-  CHECK (emit (o, encoded_null, sizeof(encoded_null)));
+  TYB_CHECK (emit (o, encoded_null, sizeof(encoded_null)));
 }
 
 int
 encode_OCTET_STRING (buf_t * o, const uint8_t * src, int src_len)
 {
   int mark = o->pos;
-  CHECK (emit (o, src, src_len));
-  CHECK (encode_TLV (o, mark, TAG_OCTETSTRING));
+  TYB_CHECK (emit (o, src, src_len));
+  TYB_CHECK (encode_TLV (o, mark, TAG_OCTETSTRING));
   return 0;
 }
 
@@ -200,12 +200,12 @@ encode_TLV (buf_t * o, unsigned int mark, uint8_t tag)
   // compute length of length
   lol = length_of_length (length);
   // ensure room for length
-  CHECK (ensure_output (o, lol));
+  TYB_CHECK (ensure_output (o, lol));
   // encode & emit the length
   encode_length (length, lol, encoded_length);
-  CHECK (emit (o, encoded_length, lol));
+  TYB_CHECK (emit (o, encoded_length, lol));
   // emit tag
-  CHECK (emit_byte (o, tag));
+  TYB_CHECK (emit_byte (o, tag));
   return 0;
 }
 
@@ -218,7 +218,7 @@ decode_length (buf_t * src, uint32_t * length)
 {
   uint8_t lol;
   // assure at least one byte [valid for length == 0]
-  CHECK (ensure_input (src, 1));
+  TYB_CHECK (ensure_input (src, 1));
   // 2) get length
   if (src->buffer[src->pos] < 0x80) {
     // one-byte length
@@ -235,7 +235,7 @@ decode_length (buf_t * src, uint32_t * length)
       // we don't support lengths > 32 bits
       return -1;
     } else {
-      CHECK (ensure_input (src, lol));
+      TYB_CHECK (ensure_input (src, lol));
       uint8_t i;
       uint32_t n=0;
       for (i=0; i < lol; i++) {
@@ -259,8 +259,8 @@ decode_TLV (asn1raw_t * dst, buf_t * src)
     return -1; // multi-byte tag
   } else {
     // read the length
-    CHECK (decode_length (src, &length));
-    CHECK (ensure_input (src, length));
+    TYB_CHECK (decode_length (src, &length));
+    TYB_CHECK (ensure_input (src, length));
     dst->type = tag;
     dst->length = length;
     dst->value = src->buffer + src->pos;

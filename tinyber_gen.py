@@ -140,12 +140,12 @@ class c_base_type (c_node):
     def emit_decode (self, out, lval, src):
         type_name, min_size, max_size = self.attrs
         out.writelines (
-            'CHECK (decode_TLV (&tlv, %s));' % (src,),
-            'FAILIF (tlv.type != %s);' % (self.tag_map[type_name],),
+            'TYB_CHECK (decode_TLV (&tlv, %s));' % (src,),
+            'TYB_FAILIF (tlv.type != %s);' % (self.tag_map[type_name],),
         )
         if type_name == 'OCTET STRING' or type_name == 'UTF8String':
             out.writelines (
-                'FAILIF(tlv.length > %d);' % (max_size,),
+                'TYB_FAILIF(tlv.length > %d);' % (max_size,),
                 'memcpy ((*%s).val, tlv.value, tlv.length);' % (lval,),
                 '(*%s).len = tlv.length;' % (lval,),
                 )
@@ -153,9 +153,9 @@ class c_base_type (c_node):
             with out.scope():
                 out.writelines ('asn1int_t intval = decode_INTEGER (&tlv);',)
                 if max_size is not None:
-                    out.writelines ('FAILIF(intval > %s);' % (max_size,),)
+                    out.writelines ('TYB_FAILIF(intval > %s);' % (max_size,),)
                 if min_size is not None:
-                    out.writelines ('FAILIF(intval < %s);' % (min_size,),)
+                    out.writelines ('TYB_FAILIF(intval < %s);' % (min_size,),)
                 out.writelines ('*(%s) = intval;' % (lval,))
         elif type_name == 'BOOLEAN':
             out.writelines ('*(%s) = decode_BOOLEAN (&tlv);' % (lval,),)
@@ -167,18 +167,18 @@ class c_base_type (c_node):
     def emit_encode (self, out, dst, src):
         type_name, min_size, max_size = self.attrs
         if type_name == 'OCTET STRING' or type_name == 'UTF8String':
-            out.writelines ('CHECK (encode_OCTET_STRING (%s, (%s)->val, (%s)->len));' % (dst, src, src))
+            out.writelines ('TYB_CHECK (encode_OCTET_STRING (%s, (%s)->val, (%s)->len));' % (dst, src, src))
         elif type_name == 'INTEGER':
             with out.scope():
                 out.writelines (
                     'asn1int_t intval = *%s;' % (src,),
-                    'CHECK (encode_INTEGER (%s, &intval));' % (dst,),
+                    'TYB_CHECK (encode_INTEGER (%s, &intval));' % (dst,),
                 )
         elif type_name == 'BOOLEAN':
             with out.scope():
                 out.writelines (
                     'asn1bool_t boolval = *%s;' % (src,),
-                    'CHECK (encode_BOOLEAN (%s, &boolval));' % (dst,),
+                    'TYB_CHECK (encode_BOOLEAN (%s, &boolval));' % (dst,),
                 )
         elif type_name == 'NULL':
             out.writelines ('encode_NULL (%s)' % (dst,))
@@ -206,8 +206,8 @@ class c_sequence (c_node):
         name, slots = self.attrs
         types = self.subs
         out.writelines (
-            'CHECK (decode_TLV (&tlv, %s));' % (src,),
-            'FAILIF (tlv.type != TAG_SEQUENCE);',
+            'TYB_CHECK (decode_TLV (&tlv, %s));' % (src,),
+            'TYB_FAILIF (tlv.type != TAG_SEQUENCE);',
             '{'
         )
         with out.indent():
@@ -219,7 +219,7 @@ class c_sequence (c_node):
                 out.writelines ('// slot %s' % (slots[i],))
                 slot_type = types[i]
                 slot_type.emit_decode (out, '&(%s->%s)' % (lval, csafe (slots[i])), '&src0')
-            out.writelines ('FAILIF (src0.pos != src0.size);')
+            out.writelines ('TYB_FAILIF (src0.pos != src0.size);')
         out.writelines ('}')
 
     def emit_encode (self, out, dst, src):
@@ -232,7 +232,7 @@ class c_sequence (c_node):
                 out.writelines ('// slot %s' % (slots[i],))
                 slot_type = types[i]
                 slot_type.emit_encode (out, dst, '&(%s->%s)' % (src, csafe (slots[i])))
-            out.writelines ('CHECK (encode_TLV (%s, mark, TAG_SEQUENCE));' % (dst,))
+            out.writelines ('TYB_CHECK (encode_TLV (%s, mark, TAG_SEQUENCE));' % (dst,))
         out.writelines ('}')
 
 class c_sequence_of (c_node):
@@ -258,19 +258,19 @@ class c_sequence_of (c_node):
             out.writelines (
                 'buf_t src1;',
                 'int i;',
-                'CHECK (decode_TLV (&tlv, %s));' % (src,),
-                'FAILIF (tlv.type != TAG_SEQUENCE);',
+                'TYB_CHECK (decode_TLV (&tlv, %s));' % (src,),
+                'TYB_FAILIF (tlv.type != TAG_SEQUENCE);',
                 'init_ibuf (&src1, tlv.value, tlv.length);',
                 '(%s)->len = 0;' % (lval,),
                 'for (i=0; (src1.pos < src1.size); i++) {',
             )
             with out.indent():
-                out.writelines ('FAILIF (i >= %s);' % (max_size,),)
+                out.writelines ('TYB_FAILIF (i >= %s);' % (max_size,),)
                 seq_type.emit_decode (out, '%s.val[i]' % (lval,), '&src1')
                 out.writelines ('(%s)->len = i + 1;' % (lval,))
             out.writelines ('}')
             if min_size:
-                out.writelines ('FAILIF ((%s)->len < %d);' % (lval, min_size))
+                out.writelines ('TYB_FAILIF ((%s)->len < %d);' % (lval, min_size))
         out.writelines ('}')
 
     def emit_encode (self, out, dst, src):
@@ -285,11 +285,11 @@ class c_sequence_of (c_node):
                 'for (i=0; i < alen; i++) {',
             )
             with out.indent():
-                out.writelines ('FAILIF (i >= %s);' % (max_size,),)
+                out.writelines ('TYB_FAILIF (i >= %s);' % (max_size,),)
                 seq_type.emit_encode (out, dst, '&((%s)->val[alen-(i+1)])' % (src,))
             out.writelines (
                 '}',
-                'CHECK (encode_TLV (%s, mark, TAG_SEQUENCE));' % (dst,)
+                'TYB_CHECK (encode_TLV (%s, mark, TAG_SEQUENCE));' % (dst,)
             )
         out.writelines ('}')
 
@@ -327,7 +327,7 @@ class c_choice (c_node):
         with out.indent():
             out.writelines (
                 'buf_t src0;',
-                'CHECK (decode_TLV (&tlv, %s));' % (src,),
+                'TYB_CHECK (decode_TLV (&tlv, %s));' % (src,),
                 'init_ibuf (&src0, tlv.value, tlv.length);',
                 'switch (tlv.type) {',
                 )
@@ -338,7 +338,7 @@ class c_choice (c_node):
                     out.writelines (
                         'case (%s | FLAG_APPLICATION | FLAG_STRUCTURED):' % (tags[i],),
                         '  %s->present = %s_PR_%s;' % (lval, name, tag_name),
-                        '  CHECK (decode_%s (&(%s->choice.%s), &src0));' % (type_name, lval, tag_name),
+                        '  TYB_CHECK (decode_%s (&(%s->choice.%s), &src0));' % (type_name, lval, tag_name),
                         '  break;',
                     )
                 out.writelines (
@@ -362,7 +362,7 @@ class c_choice (c_node):
                     tag_name = csafe (slots[i])
                     out.writelines (
                         'case %s:' % (tags[i],),
-                        '  CHECK (encode_%s (%s, &(%s->choice.%s)));' % (type_name, dst, src, tag_name),
+                        '  TYB_CHECK (encode_%s (%s, &(%s->choice.%s)));' % (type_name, dst, src, tag_name),
                         '  break;',
                     )
                 out.writelines (
@@ -370,7 +370,7 @@ class c_choice (c_node):
                 )
             out.writelines (
                 '}',
-                'CHECK (encode_TLV (%s, mark, %s->present | FLAG_APPLICATION | FLAG_STRUCTURED));' % (dst, src),
+                'TYB_CHECK (encode_TLV (%s, mark, %s->present | FLAG_APPLICATION | FLAG_STRUCTURED));' % (dst, src),
             )
         out.writelines ('}')
 
@@ -394,8 +394,8 @@ class c_enumerated (c_node):
         out.writelines ('{')
         with out.indent():
             out.writelines (
-                'CHECK (decode_TLV (&tlv, %s));' % (src,),
-                'FAILIF (tlv.type != TAG_ENUMERATED);',
+                'TYB_CHECK (decode_TLV (&tlv, %s));' % (src,),
+                'TYB_FAILIF (tlv.type != TAG_ENUMERATED);',
             )
             with out.scope():
                 out.writelines (
@@ -415,7 +415,7 @@ class c_enumerated (c_node):
         with out.scope():
             out.writelines (
                 'asn1int_t intval = *%s;' % (src,),
-                'CHECK (encode_ENUMERATED (%s, &intval));' % (dst,),
+                'TYB_CHECK (encode_ENUMERATED (%s, &intval));' % (dst,),
             )
 
 class c_defined (c_node):
@@ -429,10 +429,10 @@ class c_defined (c_node):
         out.write ('%s_t' % (name,), True)
     def emit_decode (self, out, lval, src):
         type_name, = self.attrs
-        out.writelines ('CHECK (decode_%s (%s, %s));' % (type_name, lval, src),)
+        out.writelines ('TYB_CHECK (decode_%s (%s, %s));' % (type_name, lval, src),)
     def emit_encode (self, out, dst, src):
         type_name, = self.attrs
-        out.writelines ('CHECK (encode_%s (%s, %s));' % (type_name, dst, src),)
+        out.writelines ('TYB_CHECK (encode_%s (%s, %s));' % (type_name, dst, src),)
         
 class TinyBERBackend(object):
     def __init__(self, sema_module, module_name, base_path):
@@ -567,8 +567,8 @@ class TinyBERBackend(object):
             '#include <string.h>',
             '#include "tinyber.h"',
             '',
-            '#define FAILIF(x) do { if (x) { return -1; } } while(0)',
-            '#define CHECK(x) FAILIF(-1 == (x))',
+            '#define TYB_FAILIF(x) do { if (x) { return -1; } } while(0)',
+            '#define TYB_CHECK(x) TYB_FAILIF(-1 == (x))',
             ''
         )
         self.cout.writelines (

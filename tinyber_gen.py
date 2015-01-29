@@ -93,6 +93,40 @@ class c_node:
 def csafe (s):
     return s.replace ('-', '_')
 
+# how many bytes to represent length <n> (the 'L' in TLV).
+
+def length_of_length (n):
+    if n < 0x80:
+        return 1
+    else:
+        r = 1
+        while n:
+            n >>= 8
+            r += 1
+        return r
+
+def length_of_integer (n):
+    i = 0
+    n0 = n
+    byte = 0x80
+    r = 0
+    while 1:
+        n >>= 8
+        if n0 == n:
+            if n == -1 and ((not byte & 0x80) or (i==0)):
+                # negative, but high bit clear
+                r += 1
+                i += 1
+            elif n == 0 and (byte & 0x80):
+                r += 1
+                i += 1
+            break
+        else:
+            byte = n0 & 0xff
+            r += 1
+            i += 1
+            n0 = n
+    return r
 
 # type grammar
 # type ::= base_type | sequence | sequence_of | choice | enumerated | defined
@@ -122,6 +156,23 @@ class c_base_type (c_node):
             out.write (int_max_size_type (max_size), True)
         elif type_name == 'NULL':
             pass
+        else:
+            import pdb; pdb.set_trace()
+
+    def max_size (self):
+        type_name, min_size, max_size = self.attrs
+        if type_name == 'OCTET STRING' or type_name == 'UTF8String':
+            return 1 + length_of_length (max_size) + max_size
+        elif type_name == 'BOOLEAN':
+            return 1 + length_of_length (1) + 1
+        elif type_name == 'INTEGER':
+            if max_size is None:
+                # this actually depends on what integer size is in use (asn1int_t)
+                max_size = 2**64
+            loi = length_of_integer (int (max_size))
+            return 1 + length_of_length (loi) + loi
+        elif type_name == 'NULL':
+            return 2
         else:
             import pdb; pdb.set_trace()
 
@@ -186,9 +237,11 @@ class c_base_type (c_node):
             import pdb; pdb.set_trace()
 
 class c_sequence (c_node):
+
     def __init__ (self, name, pairs):
         slots, types = zip(*pairs)
         c_node.__init__ (self, 'sequence', (name, slots,), types)
+
     def emit (self, out):
         name, slots = self.attrs
         types = self.subs
@@ -201,6 +254,14 @@ class c_sequence (c_node):
                 out.write (' %s;' % (slot_name,))
                 out.newline()
         out.write ('}')
+
+    def max_size (self):
+        name, slots = self.attrs
+        types = self.subs
+        r = 0
+        for slot_type in types:
+            r += slot_type.max_size()
+        return 1 + length_of_length(r) + r
 
     def emit_decode (self, out, lval, src):
         name, slots = self.attrs
@@ -236,6 +297,7 @@ class c_sequence (c_node):
         out.writelines ('}')
 
 class c_sequence_of (c_node):
+
     def __init__ (self, seq_type, min_size, max_size):
         c_node.__init__ (self, 'sequence_of', (min_size, max_size,), [seq_type])
 
@@ -249,6 +311,12 @@ class c_sequence_of (c_node):
             out.newline()
             out.writelines ('int len;')
         out.write ('}', True)
+
+    def max_size (self):
+        min_size, max_size, = self.attrs
+        [seq_type] = self.subs
+        r = seq_type.max_size() * max_size
+        return 1 + length_of_length(r) + r
 
     def emit_decode (self, out, lval, src):
         min_size, max_size, = self.attrs
@@ -311,6 +379,14 @@ class c_choice (c_node):
             out.writelines ('} choice;')
         out.write ('}')
         
+    def max_size (self):
+        name, slots, tags = self.attrs
+        types = self.subs
+        r = 0
+        for slot_type in types:
+            r = max (r, slot_type.max_size())
+        return 1 + length_of_length (r) + r
+
     def emit_enum (self, out):
         name, slots, tags = self.attrs
         # first emit the enum for type_PR
@@ -375,6 +451,7 @@ class c_choice (c_node):
         out.writelines ('}')
 
 class c_enumerated (c_node):
+
     def __init__ (self, pairs):
         c_node.__init__ (self, 'enumerated', (pairs,), [])
 
@@ -388,6 +465,15 @@ class c_enumerated (c_node):
                 else:
                     out.writelines ('%s,' % (name,))
         out.write ('}')
+
+    def max_size (self):
+        alts, = self.attrs
+        max_val = len(alts)
+        for name, val in alts:
+            if val is not None:
+                max_val = max (max_val, int(val))
+        loi = length_of_integer (max_val)
+        return 1 + length_of_length (loi) + loi
 
     def emit_decode (self, out, lval, src):
         alts, = self.attrs
@@ -419,19 +505,22 @@ class c_enumerated (c_node):
             )
 
 class c_defined (c_node):
-    def __init__ (self, name):
-        c_node.__init__ (self, 'defined', (name,), [])
+    def __init__ (self, name, max_size):
+        c_node.__init__ (self, 'defined', (name, max_size), [])
     def name (self):
-        name, = self.attrs
+        name, max_size = self.attrs
         return name
     def emit (self, out):
-        name, = self.attrs
+        name, max_size = self.attrs
         out.write ('%s_t' % (name,), True)
+    def max_size (self):
+        name, max_size = self.attrs
+        return max_size
     def emit_decode (self, out, lval, src):
-        type_name, = self.attrs
+        type_name, max_size = self.attrs
         out.writelines ('TYB_CHECK (decode_%s (%s, %s));' % (type_name, lval, src),)
     def emit_encode (self, out, dst, src):
-        type_name, = self.attrs
+        type_name, max_size = self.attrs
         out.writelines ('TYB_CHECK (encode_%s (%s, %s));' % (type_name, dst, src),)
         
 class TinyBERBackend(object):
@@ -513,7 +602,10 @@ class TinyBERBackend(object):
         return c_enumerated (alts)
 
     def gen_DefinedType (self, ob):
-        return c_defined (ob.type_name)
+        for type_name, node, type_decl in self.defined_types:
+            if ob.type_name == type_name:
+                return c_defined (ob.type_name, node.max_size())
+        raise ValueError (ob.type_name)
 
     def gen_dispatch (self, ob):
         name = ob.__class__.__name__
@@ -596,7 +688,11 @@ class TinyBERBackend(object):
                 node.emit_enum (out)
             out.write ('typedef ')
             node.emit (out)
-            out.writelines (' %s_t;' % (type_name,), '')
+            out.writelines (
+                ' %s_t;' % (type_name,),
+                '#define %s_MAX_SIZE %d' % (type_name, node.max_size()),
+                ''
+            )
 
         for (type_name, node, type_decl) in self.defined_types:
             self.gen_codec_funs (type_name, type_decl, node)

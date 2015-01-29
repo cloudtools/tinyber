@@ -115,7 +115,7 @@ class c_base_type (c_node):
                     'uint8_t val[%s];' % (max_size,),
                     'int len;'
                     )
-            out.write ('} ')
+            out.write ('}', True)
         elif type_name == 'BOOLEAN':
             out.write ('asn1bool_t', True)
         elif type_name == 'INTEGER':

@@ -120,7 +120,7 @@ class BadEncoding (Exception):
 
 def go():
     for tval, good in gen_thingmsg():
-        print tval.encode ('hex')
+        print tval.encode ('hex'), good
         r = try_decode (tval)
         if not good:
             if r != -1:

@@ -34,6 +34,8 @@ class c_base_type (nodes.c_base_type):
 
 class c_sequence (nodes.c_sequence):
 
+    parent_class = 'SEQUENCE'
+
     def emit (self, out):
         name, slots = self.attrs
         types = self.subs
@@ -88,45 +90,32 @@ class c_sequence_of (nodes.c_sequence_of):
 
 class c_choice (nodes.c_choice):
 
+    parent_class = 'CHOICE'
+    nodecoder = True
+    noencoder = True
+
     def emit (self, out):
         name, slots, tags = self.attrs
-        
-    def emit_enum (self, out):
-        name, slots, tags = self.attrs
-        
-    def emit_decode (self, out):
-        name, slots, tags = self.attrs
         types = self.subs
-        out.writelines (
-            'tag, src = src.next_APPLICATION()'
-            )
-        for i in range (len (tags)):
-            out.writelines ('if tag == %s:' % (tags[i],))
-            with out.indent():
-                types[i].emit_decode (out)
-            
-    def emit_encode (self, out, val):
-        name, slots, tags = self.attrs
-        types = self.subs
+        pairs = []
+        for i in range (len (slots)):
+            pairs.append ((types[i].name(), tags[i]))
+        out.writelines ('tags_f = {%s}' % (', '.join (('%s:%s' % (x[0], x[1]) for x in pairs))))
+        out.writelines ('tags_r = {%s}' % (', '.join (('%s:%s' % (x[1], x[0]) for x in pairs))))
         
-
 class c_enumerated (nodes.c_enumerated):
 
     def emit (self, out):
         alts, = self.attrs
-        out.writelines ('# emit test?')
+        pairs = []
+        for name, val in alts:
+            pairs.append ((name, val))
+        out.writelines ('tags_f = {%s}' % (', '.join (("'%s':%s" % (x[0], x[1]) for x in pairs))))
+        out.writelines ('tags_r = {%s}' % (', '.join (("%s:'%s'" % (x[1], x[0]) for x in pairs))))
 
-    def emit_decode (self, out):
-        alts, = self.attrs
-        out.writelines (
-            'v = src.next_ENUMERATED()',
-            'if v not in self.valid_enums:',
-            )
-        with out.indent():
-            out.writelines ('raise BadEnum (v)')
-
-    def emit_encode (self, out, val):
-        alts, = self.attrs
+    parent_class = 'ENUMERATED'
+    nodecoder = True
+    noencoder = True
 
 class c_defined (nodes.c_defined):
 
@@ -137,9 +126,9 @@ class c_defined (nodes.c_defined):
         type_name, max_size = self.attrs
         out.writelines (
             'v = %s()' % (type_name,),
-            'v.decode(src)',
+            'v._decode(src)',
             )
 
     def emit_encode (self, out, val):
         type_name, max_size = self.attrs
-        
+        out.writelines ('%s._encode (dst)' % (val,))

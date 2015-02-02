@@ -17,6 +17,9 @@ class UnexpectedType (Exception):
 class ConstraintViolation (Exception):
     pass
 
+class BadChoice (Exception):
+    pass
+
 class FLAG:
     UNIVERSAL   = 0x00
     STRUCTURED  = 0x20
@@ -134,6 +137,7 @@ class Buf:
 
     def next_BOOLEAN (self):
         self.check (TAG.BOOLEAN)
+        assert (self.pop_byte() == 1)
         return self.pop_byte() != 0
 
     def next_ENUMERATED (self):
@@ -142,7 +146,7 @@ class Buf:
 
     def next_APPLICATION (self):
         tag = self.pop_byte()
-        if not tag & FLAG.APPLICAITON:
+        if not tag & FLAG.APPLICATION:
             raise UnexpectedType (self, tag)
         else:
             return tag & 0x1f, self.pop (self.get_length())
@@ -221,17 +225,50 @@ class Encoder:
         with self.TLV (TAG.INTEGER):
             self.emit_integer (n)
 
-class SEQUENCE:
+class ASN1:
+    def encode (self):
+        e = Encoder()
+        self._encode (e)
+        return e.done()
+    def decode (self, data):
+        b = Buf (data)
+        self._decode (b)
 
+class SEQUENCE (ASN1):
     __slots__ = ()
-
     def __init__ (self, **args):
         for k, v in args.iteritems():
             setattr (self, k, v)
-
     def __repr__ (self):
         r = []
         for name in self.__slots__:
             r.append ('%s=%r' % (name, getattr (self, name)))
         return '<%s %s>' % (self.__class__.__name__, ' '.join (r))
 
+class CHOICE (ASN1):
+    tags_f = {}
+    tags_r = {}
+    def _decode (self, src):
+        tag, src = src.next_APPLICATION()
+        self.value = self.tags_r[tag]()
+        self.value._decode (src)
+    def _encode (self, dst):
+        for klass, tag in self.tags_f.iteritems():
+            if isinstance (self.value, klass):
+                with dst.TLV (FLAG.APPLICATION | tag):
+                    self.value._encode (dst)
+                    return
+        raise BadChoice (self.value)
+
+class ENUMERATED (ASN1):
+    tags_f = {}
+    tags_r = {}
+    value = 'NoValueDefined'
+    def _decode (self, src):
+        v = src.next_ENUMERATED()
+        self.value = self.tags_r[v]
+    def _encode (self, dst):
+        with dst.TLV (TAG.ENUMERATED):
+            dst.emit_integer (self.tags_f[self.value])
+    def __repr__ (self):
+        return '<%s %s>' % (self.__class__.__name__, self.value)

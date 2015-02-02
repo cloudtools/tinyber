@@ -9,7 +9,6 @@ from asn1ate.sema import *
 
 from tinyber.writer import Writer
 from tinyber.walker import Walker
-from tinyber.py_nodes import *
 
 class PythonBackend:
 
@@ -20,23 +19,23 @@ class PythonBackend:
 
     def gen_decoder (self, type_name, type_decl, node):
         # generate a decoder for a type assignment.
-        self.out.writelines ('def decode (self, src):')
+        self.out.writelines ('def _decode (self, src):')
         with self.out.indent():
             node.emit_decode (self.out)
-            if not isinstance (node, c_sequence):
-                # non-SEQUENCE defined types, capture final value.
-                self.out.writelines ('self.value = v')
+            # this line is unecessary (but harmless) on normal defined sequence types
+            self.out.writelines ('self.value = v')
         
     def gen_encoder (self, type_name, type_decl, node):
         # generate an encoder for a type assignment
-        self.out.writelines ('def encode (self, dst):')
+        self.out.writelines ('def _encode (self, dst):')
         with self.out.indent():
-            self.out.writelines ('pass')
             node.emit_encode (self.out, 'None')
 
     def gen_codec_funs (self, type_name, type_decl, node):
-        self.gen_decoder (type_name, type_decl, node)
-        self.gen_encoder (type_name, type_decl, node)
+        if not hasattr (node, 'nodecoder'):
+            self.gen_decoder (type_name, type_decl, node)
+        if not hasattr (node, 'noencoder'):
+            self.gen_encoder (type_name, type_decl, node)
 
     def generate_code (self):
         self.out = Writer (open (self.base_path + '_ber.py', 'wb'), indent_size=4)
@@ -46,15 +45,14 @@ class PythonBackend:
             '# *** do not edit ***',
             '',
             'from tinyber.codec import *',
-            '',
         )
         self.tag_assignments = self.walker.tag_assignments
         # generate typedefs and prototypes.
         for (type_name, node, type_decl) in self.walker.defined_types:
-            if isinstance (node, c_sequence):
-                parent_class = 'SEQUENCE'
+            if hasattr (node, 'parent_class'):
+                parent_class = node.parent_class
             else:
-                parent_class = 'object'                
+                parent_class = 'ASN1'
             self.out.writelines ('', 'class %s (%s):' % (type_name, parent_class))
             with self.out.indent():
                 self.out.writelines (

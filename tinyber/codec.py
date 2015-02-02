@@ -226,6 +226,7 @@ class Encoder:
             self.emit_integer (n)
 
 class ASN1:
+    value = None
     def encode (self):
         e = Encoder()
         self._encode (e)
@@ -233,6 +234,8 @@ class ASN1:
     def decode (self, data):
         b = Buf (data)
         self._decode (b)
+    def __repr__ (self):
+        return '<%s %r>' % (self.__class__.__name__, self.value)
 
 class SEQUENCE (ASN1):
     __slots__ = ()

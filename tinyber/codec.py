@@ -225,8 +225,15 @@ class Encoder:
         with self.TLV (TAG.INTEGER):
             self.emit_integer (n)
 
+    def emit_OCTET_STRING (self, s):
+        with self.TLV (TAG.OCTETSTRING):
+            self.emit (s)
+
 class ASN1:
     value = None
+    def __init__ (self, **args):
+        for k, v in args.iteritems():
+            setattr (self, k, v)
     def encode (self):
         e = Encoder()
         self._encode (e)
@@ -239,9 +246,6 @@ class ASN1:
 
 class SEQUENCE (ASN1):
     __slots__ = ()
-    def __init__ (self, **args):
-        for k, v in args.iteritems():
-            setattr (self, k, v)
     def __repr__ (self):
         r = []
         for name in self.__slots__:

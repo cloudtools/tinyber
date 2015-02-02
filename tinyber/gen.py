@@ -8,7 +8,13 @@ from asn1ate import parser
 from asn1ate.sema import *
 from tinyber.walker import Walker
 
-def main (args):
+def main():
+    import argparse
+    p = argparse.ArgumentParser (description='tinyber code generator.')
+    p.add_argument ('-o', '--outdir', help="output directory (defaults to location of input file)", default='')
+    p.add_argument ('-l', '--lang', help="output language ('c' or 'python')", default='c')
+    p.add_argument ('file', help="asn.1 spec", metavar="FILE")
+    args = p.parse_args()
 
     with open (args.file) as f:
         asn1def = f.read()

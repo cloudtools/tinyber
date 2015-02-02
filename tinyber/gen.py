@@ -37,12 +37,3 @@ def main (args):
 
     backend = Backend (walker, module_name, path)
     backend.generate_code()
-
-if __name__ == '__main__':
-    import argparse
-    p = argparse.ArgumentParser (description='tinyber Python code generator.')
-    p.add_argument ('-o', '--outdir', help="output directory (defaults to location of input file)", default='')
-    p.add_argument ('-l', '--lang', help="output language ('c' or 'python')", default='c')
-    p.add_argument ('file', help="asn.1 spec", metavar="FILE")
-    args = p.parse_args()
-    main (args)

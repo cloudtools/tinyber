@@ -1,0 +1,12 @@
+#!/usr/bin/env python
+# -*- Mode: Python -*-
+
+from tinyber.gen import main
+
+import argparse
+p = argparse.ArgumentParser (description='tinyber code generator.')
+p.add_argument ('-o', '--outdir', help="output directory (defaults to location of input file)", default='')
+p.add_argument ('-l', '--lang', help="output language ('c' or 'python')", default='c')
+p.add_argument ('file', help="asn.1 spec", metavar="FILE")
+args = p.parse_args()
+main (args)

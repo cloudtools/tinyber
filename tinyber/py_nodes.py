@@ -41,7 +41,7 @@ class c_sequence (nodes.c_sequence):
     def emit (self, out):
         name, slots = self.attrs
         types = self.subs
-        out.writelines ('__slots__ = (%s)' % (', '.join ("'%s'" % x for x in slots)))
+        out.writelines ('__slots__ = (%s,)' % (', '.join ("'%s'" % psafe(x) for x in slots)))
 
     def emit_decode (self, out):
         name, slots = self.attrs
@@ -134,8 +134,6 @@ class c_defined (nodes.c_defined):
     def emit_encode (self, out, val):
         type_name, max_size = self.attrs
         out.writelines ('%s._encode (dst)' % (val,))
-
-
 
 class PythonBackend:
 

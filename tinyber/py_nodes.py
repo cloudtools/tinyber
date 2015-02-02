@@ -51,7 +51,7 @@ class c_sequence (nodes.c_sequence):
             slot_name = slots[i]
             slot_type = types[i]
             slot_type.emit_decode (out)
-            out.writelines ('self.%s = v' % (slot_name,))
+            out.writelines ('self.%s = v' % (psafe(slot_name),))
 
     def emit_encode (self, out, val):
         name, slots = self.attrs
@@ -59,7 +59,7 @@ class c_sequence (nodes.c_sequence):
         out.writelines ('with dst.TLV (TAG.SEQUENCE):')
         with out.indent():
             for i in reversed (range (len (types))):
-                types[i].emit_encode (out, 'self.%s' % (slots[i],))
+                types[i].emit_encode (out, 'self.%s' % (psafe(slots[i]),))
 
 class c_sequence_of (nodes.c_sequence_of):
 
@@ -156,7 +156,7 @@ class PythonBackend:
         # generate an encoder for a type assignment
         self.out.writelines ('def _encode (self, dst):')
         with self.out.indent():
-            node.emit_encode (self.out, 'None')
+            node.emit_encode (self.out, 'self.value')
 
     def gen_codec_funs (self, type_name, type_decl, node):
         if not hasattr (node, 'nodecoder'):

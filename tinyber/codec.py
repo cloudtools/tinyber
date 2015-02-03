@@ -90,6 +90,7 @@ class Buf:
                 n = 0
                 while lol:
                     n = (n << 8) | self.pop_byte()
+                    lol -= 1
                 return n
 
     def check (self, expected):

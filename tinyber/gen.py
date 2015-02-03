@@ -26,9 +26,9 @@ def main():
     parts = os.path.split (base)
     module_name = parts[-1]
     if args.outdir:
-        path = os.path.join (args.outdir, module_name)
+        path = args.outdir
     else:
-        path = base
+        path = "."
 
     if args.lang == 'python':
         from tinyber.py_nodes import PythonBackend as Backend

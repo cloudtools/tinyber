@@ -2,6 +2,7 @@
 
 from tinyber import nodes
 from tinyber.writer import Writer
+import os
 import sys
 
 def psafe (s):
@@ -140,7 +141,8 @@ class PythonBackend:
     def __init__ (self, walker, module_name, base_path):
         self.walker = walker
         self.module_name = module_name
-        self.base_path = base_path
+        self.path = path
+        self.base_path = os.path.join(path, module_name)
 
     def gen_decoder (self, type_name, type_decl, node):
         # generate a decoder for a type assignment.

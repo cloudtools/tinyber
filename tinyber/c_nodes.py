@@ -2,6 +2,7 @@
 
 from tinyber import nodes
 from tinyber.writer import Writer
+import os
 import sys
 
 def csafe (s):
@@ -333,10 +334,11 @@ class c_defined (nodes.c_defined):
 
 class CBackend:
 
-    def __init__ (self, walker, module_name, base_path):
+    def __init__ (self, walker, module_name, path):
         self.walker = walker
         self.module_name = module_name
-        self.base_path = base_path
+        self.path = path
+        self.base_path = os.path.join(path, module_name)
 
     def gen_decoder (self, type_name, type_decl, node):
         # generate a decoder for a type assignment.
@@ -365,7 +367,16 @@ class CBackend:
         self.gen_decoder (type_name, type_decl, node)
         self.gen_encoder (type_name, type_decl, node)
 
+    def copyfiles(self):
+        import shutil
+        pkg_dir, _ = os.path.split(__file__)
+        tinyberc = os.path.join(pkg_dir, "data", "tinyber.c")
+        tinyberh = os.path.join(pkg_dir, "data", "tinyber.h")
+        shutil.copy(tinyberc, self.path)
+        shutil.copy(tinyberh, self.path)
+
     def generate_code (self):
+        self.copyfiles()
         self.hout = Writer (open (self.base_path + '.h', 'wb'))
         self.cout = Writer (open (self.base_path + '.c', 'wb'))
         self.hout.writelines (

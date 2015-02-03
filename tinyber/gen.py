@@ -10,7 +10,7 @@ from tinyber.walker import Walker
 
 def main():
     import argparse
-    p = argparse.ArgumentParser (description='tinyber code generator.')
+    p = argparse.ArgumentParser (description='tinyber ASN.1 BER/DER code generator.')
     p.add_argument ('-o', '--outdir', help="output directory (defaults to location of input file)", default='')
     p.add_argument ('-l', '--lang', help="output language ('c' or 'python')", default='c')
     p.add_argument ('-ns', '--no-standalone', action='store_true', help="[python only] do not insert codec.py into output file.")

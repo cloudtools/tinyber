@@ -180,11 +180,10 @@ class Encoder:
             self.emit (chr(n))
         else:
             r = []
-            b0 = chr (0x80 | ((n-1) & 0x7f))
             while n:
                 r.insert (0, chr (n & 0xff))
                 n >>= 8
-            r.insert (0, b0)
+            r.insert (0, chr(0x80 | len(r)))
             self.emit (''.join (r))
 
     def TLV (self, tag):
@@ -229,6 +228,13 @@ class Encoder:
         with self.TLV (TAG.OCTETSTRING):
             self.emit (s)
 
+    def emit_BOOLEAN (self, v):
+        with self.TLV (TAG.BOOLEAN):
+            if v:
+                self.emit (b'\xff')
+            else:
+                self.emit (b'\x00')
+
 class ASN1:
     value = None
     def __init__ (self, **args):
@@ -262,7 +268,7 @@ class CHOICE (ASN1):
     def _encode (self, dst):
         for klass, tag in self.tags_f.iteritems():
             if isinstance (self.value, klass):
-                with dst.TLV (FLAG.APPLICATION | tag):
+                with dst.TLV (FLAG.APPLICATION | FLAG.STRUCTURED | tag):
                     self.value._encode (dst)
                     return
         raise BadChoice (self.value)

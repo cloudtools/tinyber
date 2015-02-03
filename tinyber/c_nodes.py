@@ -334,7 +334,8 @@ class c_defined (nodes.c_defined):
 
 class CBackend:
 
-    def __init__ (self, walker, module_name, path):
+    def __init__ (self, args, walker, module_name, path):
+        self.args = args
         self.walker = walker
         self.module_name = module_name
         self.path = path

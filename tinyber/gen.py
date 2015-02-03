@@ -13,6 +13,7 @@ def main():
     p = argparse.ArgumentParser (description='tinyber code generator.')
     p.add_argument ('-o', '--outdir', help="output directory (defaults to location of input file)", default='')
     p.add_argument ('-l', '--lang', help="output language ('c' or 'python')", default='c')
+    p.add_argument ('-ns', '--no-standalone', action='store_true', help="[python only] do not insert codec.py into output file.")
     p.add_argument ('file', help="asn.1 spec", metavar="FILE")
     args = p.parse_args()
 
@@ -41,5 +42,5 @@ def main():
     walker = Walker (modules[0], nodes)
     walker.walk()
 
-    backend = Backend (walker, module_name, path)
+    backend = Backend (args, walker, module_name, path)
     backend.generate_code()

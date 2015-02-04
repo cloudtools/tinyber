@@ -38,7 +38,7 @@ class TAG:
     SEQUENCE    = 0x10 | FLAG.STRUCTURED
     SET         = 0x11 | FLAG.STRUCTURED
 
-class Buf:
+class Decoder:
 
     def __init__ (self, data, pos=0, end=None):
         self.data = data
@@ -59,7 +59,7 @@ class Buf:
         if self.pos + nbytes > self.end:
             raise Underflow (self)
         else:
-            r = Buf (self.data, self.pos, self.pos + nbytes)
+            r = Decoder (self.data, self.pos, self.pos + nbytes)
             self.pos += nbytes
             return r
 
@@ -246,7 +246,7 @@ class ASN1:
         self._encode (e)
         return e.done()
     def decode (self, data):
-        b = Buf (data)
+        b = Decoder (data)
         self._decode (b)
     def __repr__ (self):
         return '<%s %r>' % (self.__class__.__name__, self.value)

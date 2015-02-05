@@ -20,6 +20,9 @@ class ConstraintViolation (Exception):
 class BadChoice (Exception):
     pass
 
+class ExtraData (Exception):
+    pass
+
 class FLAG:
     UNIVERSAL   = 0x00
     STRUCTURED  = 0x20
@@ -73,6 +76,10 @@ class Decoder:
 
     def done (self):
         return self.pos == self.end
+
+    def assert_done (self):
+        if self.pos != self.end:
+            raise ExtraData (self)
 
     def get_length (self):
         val = self.pop_byte()

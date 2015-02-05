@@ -53,6 +53,7 @@ class c_sequence (nodes.c_sequence):
             slot_type = types[i]
             slot_type.emit_decode (out)
             out.writelines ('self.%s = v' % (psafe(slot_name),))
+        out.writelines ('src.assert_done()')
 
     def emit_encode (self, out, val):
         name, slots = self.attrs
@@ -79,7 +80,14 @@ class c_sequence_of (nodes.c_sequence_of):
         with out.indent():
             seq_type.emit_decode (out)
             out.writelines ('a.append (v)')
-        out.writelines ("# check constraints")
+        if min_size is not None and min_size > 0:
+            out.writelines ('if len(a) < %d:' % (min_size,))
+            with out.indent():
+                out.writelines ('raise ConstraintViolation(a)')
+        if max_size is not None:
+            out.writelines ('if len(a) > %d:' % (max_size,))
+            with out.indent():
+                out.writelines ('raise ConstraintViolation(a)')
         out.writelines ('v, src = a, save')
 
     def emit_encode (self, out, val):

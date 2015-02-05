@@ -2,6 +2,8 @@
 TinyBER
 =======
 
+![tinyber logo](http://www.rps.org/~/media/Exhibitions/2013/June/25/Images%20for%20Science/019_Tardigr_Pm_Craterl_400x2_2010_Nicole_Ottawa.ashx?bc=White&mw=400 "tardigrade")
+
 TinyBER is a very small, limited ASN.1 BER codec and code generator
 meant for use on embedded devices (or anywhere code size is
 restricted).  The generated code uses fixed-size structures and makes

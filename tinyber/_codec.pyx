@@ -1,0 +1,345 @@
+# -*- Mode: Python -*-
+
+# cython version of codec.py
+
+from libc.stdint cimport uint32_t, uint8_t
+from cpython cimport PyBytes_FromStringAndSize
+from libc.string cimport memcpy
+
+class IndefiniteLength (Exception):
+    pass
+
+class ElementTooLarge (Exception):
+    pass
+
+class Underflow (Exception):
+    pass
+
+class UnexpectedType (Exception):
+    pass
+
+class ConstraintViolation (Exception):
+    pass
+
+class BadChoice (Exception):
+    pass
+
+class ExtraData (Exception):
+    pass
+
+# flags for BER tags
+cdef enum FLAGS:
+    FLAGS_UNIVERSAL       = 0x00
+    FLAGS_STRUCTURED      = 0x20
+    FLAGS_APPLICATION     = 0x40
+    FLAGS_CONTEXT         = 0x80
+
+# universal BER tags
+cdef enum TAGS:
+    TAGS_BOOLEAN          = 0x01
+    TAGS_INTEGER          = 0x02
+    TAGS_BITSTRING        = 0x03
+    TAGS_OCTET_STRING     = 0x04
+    TAGS_NULL             = 0x05
+    TAGS_OBJID            = 0x06
+    TAGS_OBJDESCRIPTOR    = 0x07
+    TAGS_EXTERNAL         = 0x08
+    TAGS_REAL             = 0x09
+    TAGS_ENUMERATED       = 0x0a
+    TAGS_EMBEDDED_PDV     = 0x0b
+    TAGS_UTF8STRING       = 0x0c
+    TAGS_SEQUENCE         = 0x10 | FLAGS_STRUCTURED
+    TAGS_SET              = 0x11 | FLAGS_STRUCTURED
+
+cdef class Decoder:
+    cdef readonly bytes data
+    cdef uint8_t * pdata
+    cdef uint32_t pos
+    cdef uint32_t end
+
+    def __init__ (self, bytes data, uint32_t pos=0, uint32_t end=0):
+        self.data = data
+        self.pdata = data
+        self.pos = pos
+        if end == 0:
+            end = len(data)
+        self.end = end
+
+    cdef uint8_t pop_byte (self) except -1:
+        cdef uint8_t val
+        if self.pos + 1 > self.end:
+            raise Underflow (self)
+        else:
+            val = self.pdata[self.pos]
+            self.pos += 1
+            return val
+
+    cdef Decoder pop (self, uint32_t nbytes):
+        cdef Decoder r
+        if self.pos + nbytes > self.end:
+            raise Underflow (self)
+        else:
+            r = Decoder (self.data, self.pos, self.pos + nbytes)
+            self.pos += nbytes
+            return r
+
+    cdef bytes pop_bytes (self, uint32_t nbytes):
+        if self.pos + nbytes > self.end:
+            raise Underflow (self)
+        else:
+            result = self.data[self.pos:self.pos+nbytes]
+            self.pos += nbytes
+            return result
+
+    cpdef done (self):
+        return self.pos == self.end
+
+    def assert_done (self):
+        if self.pos != self.end:
+            raise ExtraData (self)
+
+    cdef uint32_t get_length (self):
+        cdef uint8_t val, lol
+        cdef uint32_t n
+        val = self.pop_byte()
+        if val < 0x80:
+            # one-byte length
+            return val
+        elif val == 0x80:
+            raise IndefiniteLength (self)
+        else:
+            # get length of length
+            lol = val & 0x7f
+            if lol > 4:
+                raise ElementTooLarge (self)
+            else:
+                n = 0
+                while lol:
+                    n = (n << 8) | self.pop_byte()
+                    lol -= 1
+                return n
+
+    cdef check (self, uint8_t expected):
+        tag = self.pop_byte()
+        if tag != expected:
+            raise UnexpectedType (tag, expected)
+
+    cpdef next (self, uint8_t expected):
+        cdef uint32_t length
+        self.check (expected)
+        length = self.get_length()
+        return self.pop (length)
+        
+    cdef get_integer (self, uint32_t length):
+        # XXX do not declare result as uintXX_t,
+        #   we want to support bignums here.
+        if length == 0:
+            return 0
+        else:
+            n = self.pop_byte()
+            length -= 1
+            if n & 0x80:
+                # negative
+                n -= 0x100
+            else:
+                while length:
+                    n = n << 8 | self.pop_byte()
+                    length -= 1
+                return n
+
+    def next_INTEGER (self, min_val, max_val):
+        self.check (TAGS_INTEGER)
+        r = self.get_integer (self.get_length())
+        if min_val is not None and r < min_val:
+            raise ConstraintViolation (r, min_val)
+        if max_val is not None and r > max_val:
+            raise ConstraintViolation (r, max_val)
+        return r
+
+    def next_OCTET_STRING (self, min_size, max_size):
+        self.check (TAGS_OCTET_STRING)
+        r = self.pop_bytes (self.get_length())
+        if min_size is not None and len(r) < min_size:
+            raise ConstraintViolation (r, min_size)
+        if max_size is not None and len(r) > max_size:
+            raise ConstraintViolation (r, max_size)
+        return r
+
+    def next_BOOLEAN (self):
+        self.check (TAGS_BOOLEAN)
+        assert (self.pop_byte() == 1)
+        return self.pop_byte() != 0
+
+    def next_ENUMERATED (self):
+        self.check (TAGS_ENUMERATED)
+        return self.get_integer (self.get_length())
+
+    def next_APPLICATION (self):
+        cdef uint8_t tag = self.pop_byte()
+        if not tag & FLAGS_APPLICATION:
+            raise UnexpectedType (self, tag)
+        else:
+            return tag & 0x1f, self.pop (self.get_length())
+
+
+cdef class EncoderContext:
+    cdef Encoder enc
+    cdef uint8_t tag
+    cdef uint32_t pos
+
+    def __init__ (self, Encoder enc, uint8_t tag):
+        self.enc = enc
+        self.tag = tag
+        self.pos = enc.pos
+
+    def __enter__ (self):
+        pass
+
+    def __exit__ (self, t, v, tb):
+        self.enc.emit_length (self.enc.pos - self.pos)
+        self.enc.emit_byte (self.tag)
+
+cdef class Encoder:
+
+    cdef bytes buffer
+    cdef unsigned int size
+    cdef unsigned int pos   
+
+    def __init__ (self, unsigned int size=1024):
+        self.buffer = PyBytes_FromStringAndSize (NULL, size)
+        self.size = size
+        self.pos = 0
+
+    cdef grow (self):
+        cdef unsigned int data_size = self.pos
+        cdef unsigned int new_size = (self.size * 3) / 2 # grow by 50%
+        cdef bytes new_buffer = PyBytes_FromStringAndSize (NULL, new_size)
+        cdef unsigned char * pnew = new_buffer
+        cdef unsigned char * pold = self.buffer
+        # copy old string into place
+        memcpy (&(pnew[new_size - data_size]), &(pold[self.size - data_size]), data_size)
+        self.buffer = new_buffer
+        self.size = new_size
+        
+    cdef ensure (self, unsigned int n):
+        while (self.pos + n) > self.size:
+            self.grow()
+
+    cdef emit (self, bytes s):
+        cdef unsigned int slen = len(s)
+        cdef unsigned char * pbuf = self.buffer
+        cdef unsigned char * ps = s
+        self.ensure (slen)
+        self.pos += slen
+        memcpy (&(pbuf[self.size - self.pos]), ps, slen)
+
+    cdef emit_byte (self, uint8_t b):
+        cdef unsigned char * pbuf = self.buffer
+        self.ensure (1)
+        self.pos += 1
+        pbuf[self.size - self.pos] = b
+
+    cdef emit_length (self, unsigned int n):
+        cdef unsigned int i
+        if n < 0x80:
+            self.emit_byte (n)
+        else:
+            while n:
+                self.emit_byte (0x80 | ((n-1) & 0x7f))
+
+    def TLV (self, tag):
+        return EncoderContext (self, tag)
+
+    def done (self):
+        return self.buffer[self.size - self.pos : self.size]
+
+    # base types
+
+    # encode an integer, ASN1 style.
+    # two's complement with the minimum number of bytes.
+    cdef emit_integer (self, n):
+        cdef uint8_t byte = 0x80
+        n0 = n
+        n1 = n
+        while 1:
+            n1 >>= 8
+            if n0 == n1:
+                if n1 == -1 and (not byte & 0x80):
+                    # negative, but high bit clear
+                    self.emit_byte (0xff)
+                elif n1 == 0 and byte & 0x80:
+                    # positive, but high bit set
+                    self.emit_byte (0x00)
+                break
+            else:
+                byte = n0 & 0xff
+                self.emit_byte (byte)
+                n0 = n1
+
+    cpdef emit_INTEGER (self, n):
+        with self.TLV (TAGS_INTEGER):
+            self.emit_integer (n)
+
+    cpdef emit_OCTET_STRING (self, s):
+        with self.TLV (TAGS_OCTET_STRING):
+            self.emit (s)
+
+    cpdef emit_BOOLEAN (self, v):
+        with self.TLV (TAGS_BOOLEAN):
+            if v:
+                self.emit (b'\xff')
+            else:
+                self.emit (b'\x00')
+
+class ASN1:
+    value = None
+    def __init__ (self, **args):
+        for k, v in args.iteritems():
+            setattr (self, k, v)
+    def encode (self):
+        cdef Encoder e = Encoder()
+        self._encode (e)
+        return e.done()
+    def decode (self, data):
+        b = Decoder (data)
+        self._decode (b)
+    def __repr__ (self):
+        return '<%s %r>' % (self.__class__.__name__, self.value)
+
+class SEQUENCE (ASN1):
+    __slots__ = ()
+    def __repr__ (self):
+        r = []
+        for name in self.__slots__:
+            r.append ('%s=%r' % (name, getattr (self, name)))
+        return '<%s %s>' % (self.__class__.__name__, ' '.join (r))
+
+class CHOICE (ASN1):
+    tags_f = {}
+    tags_r = {}
+    def _decode (self, Decoder src):
+        cdef uint8_t tag
+        cdef Decoder src0
+        tag, src0 = src.next_APPLICATION()
+        self.value = self.tags_r[tag]()
+        self.value._decode (src0)
+    def _encode (self, Encoder dst):
+        for klass, tag in self.tags_f.iteritems():
+            if isinstance (self.value, klass):
+                with dst.TLV (FLAGS_APPLICATION | FLAGS_STRUCTURED | tag):
+                    self.value._encode (dst)
+                    return
+        raise BadChoice (self.value)
+
+class ENUMERATED (ASN1):
+    tags_f = {}
+    tags_r = {}
+    value = 'NoValueDefined'
+    def _decode (self, Decoder src):
+        v = src.next_ENUMERATED()
+        self.value = self.tags_r[v]
+    def _encode (self, Encoder dst):
+        with dst.TLV (TAGS_ENUMERATED):
+            dst.emit_integer (self.tags_f[self.value])
+    def __repr__ (self):
+        return '<%s %s>' % (self.__class__.__name__, self.value)

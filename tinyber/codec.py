@@ -293,3 +293,10 @@ class ENUMERATED (ASN1):
             dst.emit_integer (self.tags_f[self.value])
     def __repr__ (self):
         return '<%s %s>' % (self.__class__.__name__, self.value)
+
+
+# try to pull in cython version if available.
+try:
+    from ._codec import *
+except ImportError:
+    pass

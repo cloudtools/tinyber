@@ -142,6 +142,8 @@ class c_sequence (nodes.c_sequence):
 
 class c_sequence_of (nodes.c_sequence_of):
 
+    TAG_NAME = 'TAG_SEQUENCE'
+
     def emit (self, out):
         min_size, max_size, = self.attrs
         [seq_type] = self.subs
@@ -162,7 +164,7 @@ class c_sequence_of (nodes.c_sequence_of):
                 'buf_t src1;',
                 'int i;',
                 'TYB_CHECK (decode_TLV (&tlv, %s));' % (src,),
-                'TYB_FAILIF (tlv.type != TAG_SEQUENCE);',
+                'TYB_FAILIF (tlv.type != %s);' % (self.TAG_NAME,),
                 'init_ibuf (&src1, tlv.value, tlv.length);',
                 '(%s)->len = 0;' % (lval,),
                 'for (i=0; (src1.pos < src1.size); i++) {',
@@ -192,9 +194,13 @@ class c_sequence_of (nodes.c_sequence_of):
                 seq_type.emit_encode (out, dst, '&((%s)->val[alen-(i+1)])' % (src,))
             out.writelines (
                 '}',
-                'TYB_CHECK (encode_TLV (%s, mark, TAG_SEQUENCE));' % (dst,)
+                'TYB_CHECK (encode_TLV (%s, mark, %s));' % (dst, self.TAG_NAME)
             )
         out.writelines ('}')
+
+# NOTE parent class
+class c_set_of (c_sequence_of):
+    TAG_NAME = 'TAG_SET'
 
 class c_choice (nodes.c_choice):
 

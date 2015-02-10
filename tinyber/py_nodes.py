@@ -91,6 +91,36 @@ class c_sequence_of (nodes.c_sequence_of):
             with out.indent():
                 seq_type.emit_encode (out, 'v')
 
+class c_set_of (nodes.c_sequence_of):
+
+    def emit (self, out):
+        min_size, max_size, = self.attrs
+        [item_type] = self.subs
+
+    def emit_decode (self, out):
+        min_size, max_size, = self.attrs
+        [item_type] = self.subs
+        out.writelines (
+            'src, save = src.next (TAG.SET), src',
+            'a = set()',
+            'while not src.done():'
+            )
+        with out.indent():
+            item_type.emit_decode (out)
+            out.writelines ('a.add (v)')
+        out.writelines ("# check constraints")
+        out.writelines ('v, src = a, save')
+
+    def emit_encode (self, out, val):
+        min_size, max_size, = self.attrs
+        [item_type] = self.subs
+        out.writelines ('with dst.TLV (TAG.SET):')
+        with out.indent():
+            out.writelines ('for v in %s:' % (val,))
+            with out.indent():
+                item_type.emit_encode (out, 'v')
+
+
 class c_choice (nodes.c_choice):
 
     parent_class = 'CHOICE'

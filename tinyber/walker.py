@@ -62,6 +62,8 @@ class Walker (object):
             node = self.gen_ChoiceType (type_decl, name=type_name)
         elif isinstance (type_decl, SequenceType):
             node = self.gen_SequenceType (type_decl, name=type_name)
+        elif isinstance (type_decl, SetOfType):
+            node = self.gen_SetOfType (type_decl, name=type_name)
         else:
             node = self.gen_dispatch (type_decl)
         self.defined_types.append ((type_name, node, type_decl))
@@ -87,6 +89,11 @@ class Walker (object):
             if ob.type_name == type_name:
                 return self.nodes.c_defined (ob.type_name, node.max_size())
         raise ValueError (ob.type_name)
+
+    def gen_SetOfType (self, ob):
+        min_size, max_size = self.constraint_get_min_max_size (ob.size_constraint)
+        item_type = self.gen_dispatch (ob.type_decl)
+        return self.nodes.c_set_of (item_type, min_size, max_size)
 
     def gen_dispatch (self, ob):
         name = ob.__class__.__name__

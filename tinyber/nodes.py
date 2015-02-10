@@ -82,6 +82,17 @@ class c_sequence_of (c_node):
         r = seq_type.max_size() * max_size
         return 1 + length_of_length(r) + r
 
+class c_set_of (c_node):
+
+    def __init__ (self, item_type, min_size, max_size):
+        c_node.__init__ (self, 'set_of', (min_size, max_size,), [seq_type])
+
+    def max_size (self):
+        min_size, max_size, = self.attrs
+        [item_type] = self.subs
+        r = item_type.max_size() * max_size
+        return 1 + length_of_length(r) + r
+
 class c_choice (c_node):
 
     def __init__ (self, name, alts):

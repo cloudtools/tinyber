@@ -284,18 +284,22 @@ class c_choice (nodes.c_choice):
 class c_enumerated (nodes.c_enumerated):
 
     def emit (self, out):
-        alts, = self.attrs
+        defname, alts, = self.attrs
+        if defname is not None:
+            prefix = '%s_' % (defname,)
+        else:
+            prefix = ''
         out.write ('enum {\n')
         with out.indent():
             for name, val in alts:
                 if val is not None:
-                    out.writelines ('%s = %s,' % (name, val))
+                    out.writelines ('%s%s = %s,' % (prefix, name, val))
                 else:
-                    out.writelines ('%s,' % (name,))
+                    out.writelines ('%s%s,' % (prefix, name,))
         out.write ('}')
 
     def emit_decode (self, out, lval, src):
-        alts, = self.attrs
+        defname, alts, = self.attrs
         out.writelines ('{')
         with out.indent():
             out.writelines (
@@ -316,7 +320,7 @@ class c_enumerated (nodes.c_enumerated):
         out.writelines ('}')
 
     def emit_encode (self, out, dst, src):
-        alts, = self.attrs
+        defname, alts, = self.attrs
         with out.scope():
             out.writelines (
                 'asn1int_t intval = *%s;' % (src,),

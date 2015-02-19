@@ -109,11 +109,11 @@ class c_choice (c_node):
 
 class c_enumerated (c_node):
 
-    def __init__ (self, pairs):
-        c_node.__init__ (self, 'enumerated', (pairs,), [])
+    def __init__ (self, name, pairs):
+        c_node.__init__ (self, 'enumerated', (name, pairs), [])
 
     def max_size (self):
-        alts, = self.attrs
+        _, alts, = self.attrs
         max_val = len(alts)
         for name, val in alts:
             if val is not None:

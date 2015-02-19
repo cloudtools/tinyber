@@ -147,7 +147,7 @@ class c_choice (nodes.c_choice):
 class c_enumerated (nodes.c_enumerated):
 
     def emit (self, out):
-        alts, = self.attrs
+        defname, alts, = self.attrs
         pairs = []
         for name, val in alts:
             pairs.append ((name, val))

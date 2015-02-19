@@ -64,6 +64,8 @@ class Walker (object):
             node = self.gen_SequenceType (type_decl, name=type_name)
         elif isinstance (type_decl, SetOfType):
             node = self.gen_SetOfType (type_decl, name=type_name)
+        elif isinstance (type_decl, ValueListType):
+            node = self.gen_ValueListType (type_decl, name=type_name)
         else:
             node = self.gen_dispatch (type_decl)
         self.defined_types.append ((type_name, node, type_decl))
@@ -75,14 +77,14 @@ class Walker (object):
             min_size, max_size = None, None
         return self.nodes.c_base_type (ob.type_name, min_size, max_size)
 
-    def gen_ValueListType (self, ob):
+    def gen_ValueListType (self, ob, name=None):
         alts = []
         for sub in ob.named_values:
             if sub.value is not None:
                 alts.append ((sub.identifier, sub.value))
             else:
                 alts.append ((sub.identifier, None))
-        return self.nodes.c_enumerated (alts)
+        return self.nodes.c_enumerated (name, alts)
 
     def gen_DefinedType (self, ob):
         for type_name, node, type_decl in self.defined_types:

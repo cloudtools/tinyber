@@ -58,7 +58,7 @@ class c_sequence (nodes.c_sequence):
     def emit_encode (self, out, val):
         name, slots = self.attrs
         types = self.subs
-        out.writelines ('with dst.TLV (TAG.SEQUENCE):')
+        out.writelines ('with dst.TLV (TAG.SEQUENCE, FLAG.STRUCTURED):')
         with out.indent():
             for i in reversed (range (len (types))):
                 types[i].emit_encode (out, 'self.%s' % (psafe(slots[i]),))
@@ -93,7 +93,7 @@ class c_sequence_of (nodes.c_sequence_of):
     def emit_encode (self, out, val):
         min_size, max_size, = self.attrs
         [seq_type] = self.subs
-        out.writelines ('with dst.TLV (TAG.SEQUENCE):')
+        out.writelines ('with dst.TLV (TAG.SEQUENCE, FLAG.STRUCTURED):')
         with out.indent():
             out.writelines ('for v in reversed (%s):' % (val,))
             with out.indent():
@@ -122,7 +122,7 @@ class c_set_of (nodes.c_sequence_of):
     def emit_encode (self, out, val):
         min_size, max_size, = self.attrs
         [item_type] = self.subs
-        out.writelines ('with dst.TLV (TAG.SET):')
+        out.writelines ('with dst.TLV (TAG.SET, FLAG.STRUCTURED):')
         with out.indent():
             out.writelines ('for v in %s:' % (val,))
             with out.indent():

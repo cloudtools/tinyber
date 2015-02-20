@@ -14,6 +14,9 @@ class Underflow (Exception):
 class UnexpectedType (Exception):
     pass
 
+class UnexpectedFlags (Exception):
+    pass
+
 class ConstraintViolation (Exception):
     pass
 
@@ -38,8 +41,8 @@ class TAG:
     OID         = 0x06
     ENUMERATED  = 0x0A
     UTF8STRING  = 0x0C
-    SEQUENCE    = 0x10 | FLAG.STRUCTURED
-    SET         = 0x11 | FLAG.STRUCTURED
+    SEQUENCE    = 0x10
+    SET         = 0x11
 
 class Decoder:
 
@@ -100,13 +103,23 @@ class Decoder:
                     lol -= 1
                 return n
 
-    def check (self, expected):
-        tag = self.pop_byte()
-        if tag != expected:
-            raise UnexpectedType (tag, expected)
+    def get_tag (self):
+        b = self.pop_byte()
+        tag = b & 0b11111
+        flags = b & 0b1100000
+        if tag == 0b11111:
+            tag = self.get_length()
+        return tag, flags
 
-    def next (self, expected):
-        self.check (expected)
+    def check (self, expected_tag, expected_flags=0):
+        tag, flags = self.get_tag()
+        if tag != expected_tag:
+            raise UnexpectedType (tag, expected_tag)
+        if flags != expected_flags:
+            raise UnexpectedFlags (flags, expected_flags)
+
+    def next (self, expected, flags=0):
+        self.check (expected, flags)
         length = self.get_length()
         return self.pop (length)
         
@@ -153,17 +166,18 @@ class Decoder:
         return self.get_integer (self.get_length())
 
     def next_APPLICATION (self):
-        tag = self.pop_byte()
-        if not tag & FLAG.APPLICATION:
-            raise UnexpectedType (self, tag)
+        tag, flags = self.get_tag()
+        if not flags & FLAG.APPLICATION:
+            raise UnexpectedFlags (self, flags, FLAG.APPLICATION)
         else:
-            return tag & 0x1f, self.pop (self.get_length())
+            return tag, self.pop (self.get_length())
 
 class EncoderContext:
 
-    def __init__ (self, enc, tag):
+    def __init__ (self, enc, tag, flags):
         self.enc = enc
         self.tag = tag
+        self.flags = flags
         self.pos = enc.length
 
     def __enter__ (self):
@@ -171,7 +185,7 @@ class EncoderContext:
 
     def __exit__ (self, t, v, tb):
         self.enc.emit_length (self.enc.length - self.pos)
-        self.enc.emit (chr (self.tag))
+        self.enc.emit_tag (self.tag, self.flags)
 
 class Encoder:
 
@@ -194,8 +208,15 @@ class Encoder:
             r.insert (0, chr(0x80 | len(r)))
             self.emit (''.join (r))
 
-    def TLV (self, tag):
-        return EncoderContext (self, tag)
+    def emit_tag (self, tag, flags=0):
+        if tag < 30:
+            self.emit (chr (tag | flags))
+        else:
+            self.emit_integer (tag)
+            self.emit (chr (31 | flags))
+
+    def TLV (self, tag, flags=0):
+        return EncoderContext (self, tag, flags)
 
     def done (self):
         return ''.join (self.r)
@@ -276,7 +297,7 @@ class CHOICE (ASN1):
     def _encode (self, dst):
         for klass, tag in self.tags_f.iteritems():
             if isinstance (self.value, klass):
-                with dst.TLV (FLAG.APPLICATION | FLAG.STRUCTURED | tag):
+                with dst.TLV (tag, FLAG.APPLICATION | FLAG.STRUCTURED):
                     self.value._encode (dst)
                     return
         raise BadChoice (self.value)
@@ -297,6 +318,6 @@ class ENUMERATED (ASN1):
 
 # try to pull in cython version if available.
 try:
-    from ._codec import *
+    from tinyber._codec import *
 except ImportError:
     pass

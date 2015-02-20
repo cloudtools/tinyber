@@ -18,6 +18,9 @@ class Underflow (Exception):
 class UnexpectedType (Exception):
     pass
 
+class UnexpectedFlags (Exception):
+    pass
+
 class ConstraintViolation (Exception):
     pass
 
@@ -48,8 +51,8 @@ cdef enum TAGS:
     TAGS_ENUMERATED       = 0x0a
     TAGS_EMBEDDED_PDV     = 0x0b
     TAGS_UTF8STRING       = 0x0c
-    TAGS_SEQUENCE         = 0x10 | FLAGS_STRUCTURED
-    TAGS_SET              = 0x11 | FLAGS_STRUCTURED
+    TAGS_SEQUENCE         = 0x10
+    TAGS_SET              = 0x11
 
 cdef class Decoder:
     cdef readonly bytes data
@@ -119,10 +122,20 @@ cdef class Decoder:
                     lol -= 1
                 return n
 
-    cdef check (self, uint8_t expected):
-        tag = self.pop_byte()
-        if tag != expected:
-            raise UnexpectedType (tag, expected)
+    cpdef get_tag (self):
+        cdef uint8_t b = self.pop_byte()
+        cdef uint32_t tag  = b & 0b0011111
+        cdef uint8_t flags = b & 0b1100000
+        if tag == 0b11111:
+            tag = self.get_length()
+        return tag, flags
+
+    cdef check (self, uint8_t expected_tag, uint8_t expected_flags=0):
+        tag, flags = self.get_tag()
+        if tag != expected_tag:
+            raise UnexpectedType (tag, expected_tag)
+        if flags != expected_flags:
+            raise UnexpectedFlags (flags, expected_flags)
 
     cpdef next (self, uint8_t expected):
         cdef uint32_t length
@@ -175,21 +188,24 @@ cdef class Decoder:
         return self.get_integer (self.get_length())
 
     def next_APPLICATION (self):
-        cdef uint8_t tag = self.pop_byte()
-        if not tag & FLAGS_APPLICATION:
-            raise UnexpectedType (self, tag)
+        cdef uint32_t tag
+        cdef uint8_t flags
+        tag, flags = self.get_tag()
+        if not flags & FLAGS_APPLICATION:
+            raise UnexpectedFlags (self, flags, FLAGS_APPLICATION)
         else:
-            return tag & 0x1f, self.pop (self.get_length())
-
+            return tag, self.pop (self.get_length())
 
 cdef class EncoderContext:
     cdef Encoder enc
-    cdef uint8_t tag
+    cdef uint32_t tag
+    cdef uint8_t flags
     cdef uint32_t pos
 
-    def __init__ (self, Encoder enc, uint8_t tag):
+    def __init__ (self, Encoder enc, uint32_t tag, uint8_t flags):
         self.enc = enc
         self.tag = tag
+        self.flags = flags
         self.pos = enc.pos
 
     def __enter__ (self):
@@ -197,7 +213,7 @@ cdef class EncoderContext:
 
     def __exit__ (self, t, v, tb):
         self.enc.emit_length (self.enc.pos - self.pos)
-        self.enc.emit_byte (self.tag)
+        self.enc.emit_tag (self.tag, self.flags)
 
 cdef class Encoder:
 
@@ -239,6 +255,13 @@ cdef class Encoder:
         self.pos += 1
         pbuf[self.size - self.pos] = b
 
+    def emit_tag (self, uint32_t tag, uint8_t flags):
+        if tag < 0b11111:
+            self.emit_byte (tag | flags)
+        else:
+            self.emit_integer (tag)
+            self.emit_byte (0b11111 | flags)
+
     cdef emit_length (self, unsigned int n):
         cdef unsigned int i
         if n < 0x80:
@@ -247,8 +270,8 @@ cdef class Encoder:
             while n:
                 self.emit_byte (0x80 | ((n-1) & 0x7f))
 
-    def TLV (self, tag):
-        return EncoderContext (self, tag)
+    def TLV (self, tag, flags=0):
+        return EncoderContext (self, tag, flags)
 
     def done (self):
         return self.buffer[self.size - self.pos : self.size]
@@ -326,7 +349,7 @@ class CHOICE (ASN1):
     def _encode (self, Encoder dst):
         for klass, tag in self.tags_f.iteritems():
             if isinstance (self.value, klass):
-                with dst.TLV (FLAGS_APPLICATION | FLAGS_STRUCTURED | tag):
+                with dst.TLV (tag, FLAGS_APPLICATION | FLAGS_STRUCTURED):
                     self.value._encode (dst)
                     return
         raise BadChoice (self.value)

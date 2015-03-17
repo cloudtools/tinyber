@@ -28,7 +28,8 @@ typedef enum {
 } asn1type;
 
 typedef struct {
-  uint8_t type;
+  uint32_t type;
+  uint8_t flags;
   unsigned int length;
   uint8_t * value;
 } asn1raw_t;

@@ -95,6 +95,13 @@ def gen_msga():
 
     return result
 
+def gen_msgc():
+    return [
+        (SEQUENCE (OCTET_STRING (''), BOOLEAN (True)), True),
+        (SEQUENCE (OCTET_STRING ('x' * 499), BOOLEAN (True)), True),
+        (SEQUENCE (OCTET_STRING ('x' * 501), BOOLEAN (True)), False),
+    ]
+
 def gen_thingmsg():
     result = []
     for msgb, good in gen_msgb():
@@ -107,7 +114,7 @@ def gen_thingmsg():
         result.append ((TLV (APPLICATION (9), msga), False),)
         # wrong tag
         result.append ((TLV (APPLICATION (1), msga), False),)
-
-
+    for msgc, good in gen_msgc():
+        result.append ((TLV (APPLICATION (2), msgc), good))
     return result
         

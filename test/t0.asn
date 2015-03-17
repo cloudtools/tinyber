@@ -8,7 +8,8 @@ ThingModule DEFINITIONS ::= BEGIN
     
     ThingMsg ::= CHOICE {
         msg-a  [0] MsgA,
-	msg-b  [1] MsgB
+	msg-b  [1] MsgB,
+        msg-c  [2] MsgC
     }
 
     Pair ::= SEQUENCE {
@@ -38,5 +39,12 @@ ThingModule DEFINITIONS ::= BEGIN
 	x SEQUENCE SIZE (0..2) OF BOOLEAN,
 	y SEQUENCE SIZE (1..2) OF INTEGER (0..255)
     }
+
+    MsgC ::= SEQUENCE {
+        -- test multi-byte length
+        lstr OCTET STRING SIZE (0..500),
+	tbool BOOLEAN
+    }
+
 
 END

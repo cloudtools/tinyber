@@ -2,6 +2,9 @@
 
 # cython version of codec.py
 
+# NOTE: the encoder writes into its buffer in *reverse*, with predecrement.
+#  this makes things much simpler.
+
 from libc.stdint cimport uint32_t, uint8_t
 from cpython cimport PyBytes_FromStringAndSize
 from libc.string cimport memcpy
@@ -137,9 +140,9 @@ cdef class Decoder:
         if flags != expected_flags:
             raise UnexpectedFlags (flags, expected_flags)
 
-    cpdef next (self, uint8_t expected):
+    cpdef next (self, uint8_t expected, uint8_t expected_flags=0):
         cdef uint32_t length
-        self.check (expected)
+        self.check (expected, expected_flags)
         length = self.get_length()
         return self.pop (length)
         
@@ -263,12 +266,15 @@ cdef class Encoder:
             self.emit_byte (0b11111 | flags)
 
     cdef emit_length (self, unsigned int n):
-        cdef unsigned int i
+        cdef int c = 0
         if n < 0x80:
             self.emit_byte (n)
         else:
             while n:
-                self.emit_byte (0x80 | ((n-1) & 0x7f))
+                self.emit_byte (n & 0xff)
+                n >>= 8
+                c += 1
+            self.emit_byte (0x80 | c)
 
     def TLV (self, tag, flags=0):
         return EncoderContext (self, tag, flags)

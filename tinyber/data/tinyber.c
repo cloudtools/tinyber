@@ -5,9 +5,6 @@
 #include <stdint.h>
 #include "tinyber.h"
 
-#define TYB_FAILIF(x) do { if (x) { return -1; } } while(0)
-#define TYB_CHECK(x) TYB_FAILIF(-1 == (x))
-
 // --------------------------------------------------------------------------------
 //  buffer interface
 // --------------------------------------------------------------------------------
@@ -88,7 +85,7 @@ length_of_length (asn1int_t n)
   }
 }
 
-// encode leng into a byte buffer.
+// encode length into a byte buffer.
 static
 void
 encode_length (asn1int_t len, int n, uint8_t * buffer)
@@ -142,12 +139,32 @@ encode_integer (buf_t * o, asn1int_t n)
   return 0;
 }
 
+static
+int
+encode_tag (buf_t * o, uint32_t tag, uint8_t flags)
+{
+  if (tag < 0x1f) {
+    TYB_CHECK (emit_byte (o, tag | flags));
+  } else {
+    while (tag > 0) {
+      if (tag < 0x80) {
+	TYB_CHECK (emit_byte (o, tag));
+      } else {
+	TYB_CHECK (emit_byte (o, (tag & 0x7f) | 0x80));
+      }
+      tag >>= 7;
+    }
+    TYB_CHECK (emit_byte (o, 0x1f | flags));
+  }
+  return 0;
+}
+
 int
 encode_INTEGER (buf_t * o, const asn1int_t * n)
 {
   unsigned int mark = o->pos;
   encode_integer (o, *n);
-  TYB_CHECK (encode_TLV (o, mark, TAG_INTEGER));
+  TYB_CHECK (encode_TLV (o, mark, TAG_INTEGER, FLAG_UNIVERSAL));
   return 0;
 }
 
@@ -156,7 +173,7 @@ encode_ENUMERATED (buf_t * o, const asn1int_t * n)
 {
   unsigned int mark = o->pos;
   encode_integer (o, *n);
-  TYB_CHECK (encode_TLV (o, mark, TAG_ENUMERATED));
+  TYB_CHECK (encode_TLV (o, mark, TAG_ENUMERATED, FLAG_UNIVERSAL));
   return 0;
 }
 
@@ -186,14 +203,14 @@ encode_OCTET_STRING (buf_t * o, const uint8_t * src, int src_len)
 {
   int mark = o->pos;
   TYB_CHECK (emit (o, src, src_len));
-  TYB_CHECK (encode_TLV (o, mark, TAG_OCTETSTRING));
+  TYB_CHECK (encode_TLV (o, mark, TAG_OCTETSTRING, FLAG_UNIVERSAL));
   return 0;
 }
 
 // assuming the encoded value has already been emitted (starting at position <mark>),
 //  emit the length and tag for that value.
 int
-encode_TLV (buf_t * o, unsigned int mark, uint8_t tag)
+encode_TLV (buf_t * o, unsigned int mark, uint32_t tag, uint8_t flags)
 {
   int length = mark - o->pos;
   uint8_t encoded_length[6];
@@ -205,8 +222,8 @@ encode_TLV (buf_t * o, unsigned int mark, uint8_t tag)
   // encode & emit the length
   encode_length (length, lol, encoded_length);
   TYB_CHECK (emit (o, encoded_length, lol));
-  // emit tag
-  TYB_CHECK (emit_byte (o, tag));
+  // emit tag|flags
+  TYB_CHECK (encode_tag (o, tag, flags));
   return 0;
 }
 
@@ -248,26 +265,51 @@ decode_length (buf_t * src, uint32_t * length)
   }
 }
 
+int
+decode_tag (buf_t * src, uint32_t * tag, uint8_t * flags)
+{
+  uint32_t r = 0;
+  uint8_t b = 0;
+  TYB_CHECK (ensure_input (src, 1));
+  b = src->buffer[src->pos++];
+  *flags = b & 0xe0;
+  if ((b & 0x1f) < 0x1f) {
+    // single-byte tag
+    *tag = b & 0x1f;
+    return 0;
+  } else {
+    // multi-byte tag
+    while (1) {
+      // tag is in base128, high bit is continuation flag.
+      TYB_CHECK (ensure_input (src, 1));
+      b = src->buffer[src->pos++];
+      if (!(b & 0x80)) {
+	break;
+      } else {
+	r = (r << 7) | (b & 0x7f);
+      }
+    }
+    r = (r << 7) | b;
+    *tag = r;
+    return 0;
+  }
+}
 
 int
 decode_TLV (asn1raw_t * dst, buf_t * src)
 {
-  uint8_t tag;
+  uint32_t tag;
+  uint8_t flags;
   uint32_t length;
-  // 1) get tag
-  tag = src->buffer[src->pos++];
-  if ((tag & 0x1f) == 0x1f) {
-    return -1; // multi-byte tag
-  } else {
-    // read the length
-    TYB_CHECK (decode_length (src, &length));
-    TYB_CHECK (ensure_input (src, length));
-    dst->type = tag;
-    dst->length = length;
-    dst->value = src->buffer + src->pos;
-    src->pos += length;
-    return 0;
-  }
+  TYB_CHECK (decode_tag (src, &tag, &flags));
+  TYB_CHECK (decode_length (src, &length));
+  TYB_CHECK (ensure_input (src, length));
+  dst->type = tag;
+  dst->flags = flags;
+  dst->length = length;
+  dst->value = src->buffer + src->pos;
+  src->pos += length;
+  return 0;
 }
 
 asn1int_t

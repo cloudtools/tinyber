@@ -71,7 +71,7 @@ cdef class Decoder:
             end = len(data)
         self.end = end
 
-    cdef uint8_t pop_byte (self) except -1:
+    cdef uint8_t pop_byte (self) except? 255:
         cdef uint8_t val
         if self.pos + 1 > self.end:
             raise Underflow (self)
@@ -104,7 +104,7 @@ cdef class Decoder:
         if self.pos != self.end:
             raise ExtraData (self)
 
-    cdef uint32_t get_length (self):
+    cdef uint32_t get_length (self) except? 4294967295:
         cdef uint8_t val, lol
         cdef uint32_t n
         val = self.pop_byte()
@@ -125,12 +125,23 @@ cdef class Decoder:
                     lol -= 1
                 return n
 
+    cdef uint32_t get_multibyte_tag (self) except? 4294967295:
+        cdef uint32_t r = 0
+        cdef uint8_t val
+        while 1:
+            val = self.pop_byte()
+            r <<= 7
+            r |= val & 0x7f
+            if not val & 0x80:
+                break
+        return r
+
     cpdef get_tag (self):
         cdef uint8_t b = self.pop_byte()
-        cdef uint32_t tag  = b & 0b0011111
-        cdef uint8_t flags = b & 0b1100000
+        cdef uint32_t tag  = b & 0b00011111
+        cdef uint8_t flags = b & 0b11100000
         if tag == 0b11111:
-            tag = self.get_length()
+            tag = self.get_multibyte_tag()
         return tag, flags
 
     cdef check (self, uint8_t expected_tag, uint8_t expected_flags=0):
@@ -145,7 +156,7 @@ cdef class Decoder:
         self.check (expected, expected_flags)
         length = self.get_length()
         return self.pop (length)
-        
+
     cdef get_integer (self, uint32_t length):
         # XXX do not declare result as uintXX_t,
         #   we want to support bignums here.
@@ -222,7 +233,7 @@ cdef class Encoder:
 
     cdef bytes buffer
     cdef unsigned int size
-    cdef unsigned int pos   
+    cdef unsigned int pos
 
     def __init__ (self, unsigned int size=1024):
         self.buffer = PyBytes_FromStringAndSize (NULL, size)
@@ -239,7 +250,7 @@ cdef class Encoder:
         memcpy (&(pnew[new_size - data_size]), &(pold[self.size - data_size]), data_size)
         self.buffer = new_buffer
         self.size = new_size
-        
+
     cdef ensure (self, unsigned int n):
         while (self.pos + n) > self.size:
             self.grow()
@@ -262,7 +273,12 @@ cdef class Encoder:
         if tag < 0b11111:
             self.emit_byte (tag | flags)
         else:
-            self.emit_integer (tag)
+            while tag:
+                if tag < 0x80:
+                    self.emit_byte (tag)
+                else:
+                    self.emit_byte ((tag & 0x7f) | 0x80)
+                tag >>= 7
             self.emit_byte (0b11111 | flags)
 
     cdef emit_length (self, unsigned int n):
@@ -288,12 +304,13 @@ cdef class Encoder:
     # two's complement with the minimum number of bytes.
     cdef emit_integer (self, n):
         cdef uint8_t byte = 0x80
+        cdef bint first = 1
         n0 = n
         n1 = n
         while 1:
             n1 >>= 8
             if n0 == n1:
-                if n1 == -1 and (not byte & 0x80):
+                if n1 == -1 and ((not byte & 0x80) or first):
                     # negative, but high bit clear
                     self.emit_byte (0xff)
                 elif n1 == 0 and byte & 0x80:
@@ -304,6 +321,7 @@ cdef class Encoder:
                 byte = n0 & 0xff
                 self.emit_byte (byte)
                 n0 = n1
+            first = 0
 
     cpdef emit_INTEGER (self, n):
         with self.TLV (TAGS_INTEGER):

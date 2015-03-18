@@ -2,6 +2,8 @@
 
 # base for python codecs.
 
+# NOTE: the encoder accumulates in *reverse*.
+
 class IndefiniteLength (Exception):
     pass
 
@@ -103,12 +105,22 @@ class Decoder:
                     lol -= 1
                 return n
 
+    def get_multibyte_tag (self):
+        r = 0
+        while 1:
+            val = self.pop_byte()
+            r <<= 7
+            r |= val & 0x7f
+            if not val & 0x80:
+                break
+        return r
+
     def get_tag (self):
         b = self.pop_byte()
         tag = b & 0b11111
         flags = b & 0b1100000
         if tag == 0b11111:
-            tag = self.get_length()
+            tag = self.get_multibyte_tag()
         return tag, flags
 
     def check (self, expected_tag, expected_flags=0):
@@ -122,7 +134,7 @@ class Decoder:
         self.check (expected, flags)
         length = self.get_length()
         return self.pop (length)
-        
+
     def get_integer (self, length):
         if length == 0:
             return 0
@@ -192,7 +204,7 @@ class Encoder:
     def __init__ (self):
         self.r = []
         self.length = 0
-        
+
     def emit (self, data):
         self.r.insert (0, data)
         self.length += len(data)
@@ -209,11 +221,16 @@ class Encoder:
             self.emit (''.join (r))
 
     def emit_tag (self, tag, flags=0):
-        if tag < 30:
+        if tag < 0x1f:
             self.emit (chr (tag | flags))
         else:
-            self.emit_integer (tag)
-            self.emit (chr (31 | flags))
+            while tag:
+                if tag < 0x80:
+                    self.emit (chr (tag))
+                else:
+                    self.emit (chr ((tag & 0x7f) | 0x80))
+                tag >>= 7
+            self.emit (chr (0x1f | flags))
 
     def TLV (self, tag, flags=0):
         return EncoderContext (self, tag, flags)

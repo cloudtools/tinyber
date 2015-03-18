@@ -23,8 +23,8 @@ typedef enum {
   TAG_OID         = 0x06,
   TAG_ENUMERATED  = 0x0A,
   TAG_UTF8STRING  = 0x0C,
-  TAG_SEQUENCE    = 0x10 | FLAG_STRUCTURED,
-  TAG_SET         = 0x11 | FLAG_STRUCTURED
+  TAG_SEQUENCE    = 0x10,
+  TAG_SET         = 0x11,
 } asn1type;
 
 typedef struct {
@@ -67,11 +67,16 @@ int decode_TLV (asn1raw_t * dst, buf_t * src);
 int decode_length (buf_t * src, uint32_t * length);
 
 // encoder
-int encode_TLV (buf_t * o, unsigned int mark, uint8_t tag);
+int encode_TLV (buf_t * o, unsigned int mark, uint32_t tag, uint8_t flags);
 int encode_INTEGER (buf_t * o, const asn1int_t * n);
 int encode_BOOLEAN (buf_t * o, const asn1bool_t * value);
 int encode_OCTET_STRING (buf_t * o, const uint8_t * src, int src_len);
 int encode_ENUMERATED (buf_t * o, const asn1int_t * n);
 int encode_NULL (buf_t * o);
+
+//#include <stdio.h>
+//#define TYB_FAILIF(x) do { if (x) { fprintf (stderr, "*** line %d ***\\n", __LINE__); abort(); } } while(0)
+#define TYB_FAILIF(x) do { if (x) { return -1; } } while(0)
+#define TYB_CHECK(x) TYB_FAILIF(-1 == (x))
 
 #endif // _TINYBER_H_

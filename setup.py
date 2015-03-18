@@ -13,7 +13,7 @@ setup (
     name             = 'tinyber_gen',
     packages         = find_packages(),
     description      = 'code generator for tinyber',
-    scripts          = ['scripts/tinyber_gen'],
+    scripts          = ['scripts/tinyber_gen', 'scripts/dax'],
     package_data     = {'tinyber': ['data/*.[ch]', 'tinyber/codec.py']},
     ext_modules      = exts
     )

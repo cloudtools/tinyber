@@ -36,7 +36,7 @@ def gen_color():
         ('wieuriuwiusdf', False),
         ('x', False),
         ]
-    
+
 def gen_msgb():
     gx = SEQUENCE()
     gy = SEQUENCE (INTEGER (1))
@@ -105,16 +105,15 @@ def gen_msgc():
 def gen_thingmsg():
     result = []
     for msgb, good in gen_msgb():
-        result.append ((TLV (APPLICATION (1), msgb), good),)
+        result.append ((APPLICATION (1, True, msgb), good),)
         # wrong tag
-        result.append ((TLV (APPLICATION (0), msgb), False),)
+        result.append ((APPLICATION (0, True, msgb), False),)
     for msga, good in gen_msga():
-        result.append ((TLV (APPLICATION (0), msga), good),)
+        result.append ((APPLICATION (0, True, msga), good),)
         # bad tag
-        result.append ((TLV (APPLICATION (9), msga), False),)
+        result.append ((APPLICATION (9, True, msga), False),)
         # wrong tag
-        result.append ((TLV (APPLICATION (1), msga), False),)
+        result.append ((APPLICATION (1, True, msga), False),)
     for msgc, good in gen_msgc():
-        result.append ((TLV (APPLICATION (2), msgc), good))
+        result.append ((APPLICATION (50, True, msgc), good))
     return result
-        

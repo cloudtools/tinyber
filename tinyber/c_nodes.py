@@ -69,7 +69,7 @@ class c_base_type (nodes.c_base_type):
         elif type_name == 'NULL':
             pass
         else:
-            import pdb; pdb.set_trace()            
+            import pdb; pdb.set_trace()
 
     def emit_encode (self, out, dst, src):
         type_name, min_size, max_size = self.attrs
@@ -137,7 +137,7 @@ class c_sequence (nodes.c_sequence):
                 out.writelines ('// slot %s' % (slots[i],))
                 slot_type = types[i]
                 slot_type.emit_encode (out, dst, '&(%s->%s)' % (src, csafe (slots[i])))
-            out.writelines ('TYB_CHECK (encode_TLV (%s, mark, TAG_SEQUENCE));' % (dst,))
+            out.writelines ('TYB_CHECK (encode_TLV (%s, mark, TAG_SEQUENCE, FLAG_STRUCTURED));' % (dst,))
         out.writelines ('}')
 
 class c_sequence_of (nodes.c_sequence_of):
@@ -194,7 +194,7 @@ class c_sequence_of (nodes.c_sequence_of):
                 seq_type.emit_encode (out, dst, '&((%s)->val[alen-(i+1)])' % (src,))
             out.writelines (
                 '}',
-                'TYB_CHECK (encode_TLV (%s, mark, %s));' % (dst, self.TAG_NAME)
+                'TYB_CHECK (encode_TLV (%s, mark, %s, FLAG_STRUCTURED));' % (dst, self.TAG_NAME)
             )
         out.writelines ('}')
 
@@ -217,7 +217,7 @@ class c_choice (nodes.c_choice):
                     out.writelines ('%s_t %s;' % (type_name, slot_name))
             out.writelines ('} choice;')
         out.write ('}')
-        
+
     def emit_enum (self, out):
         name, slots, tags = self.attrs
         # first emit the enum for type_PR
@@ -226,7 +226,7 @@ class c_choice (nodes.c_choice):
             for i in range (len (slots)):
                 out.writelines ('%s_PR_%s = %s,' % (name, csafe (slots[i]), tags[i]))
         out.writelines ('} %s_PR;' % (name,), '')
-        
+
     def emit_decode (self, out, lval, src):
         name, slots, tags = self.attrs
         types = self.subs
@@ -243,7 +243,7 @@ class c_choice (nodes.c_choice):
                     type_name = types[i].name()
                     tag_name = csafe (slots[i])
                     out.writelines (
-                        'case (%s | FLAG_APPLICATION | FLAG_STRUCTURED):' % (tags[i],),
+                        'case (%s):' % (tags[i],),
                         '  %s->present = %s_PR_%s;' % (lval, name, tag_name),
                         '  TYB_CHECK (decode_%s (&(%s->choice.%s), &src0));' % (type_name, lval, tag_name),
                         '  break;',
@@ -277,7 +277,7 @@ class c_choice (nodes.c_choice):
                 )
             out.writelines (
                 '}',
-                'TYB_CHECK (encode_TLV (%s, mark, %s->present | FLAG_APPLICATION | FLAG_STRUCTURED));' % (dst, src),
+                'TYB_CHECK (encode_TLV (%s, mark, %s->present, FLAG_APPLICATION | FLAG_STRUCTURED));' % (dst, src),
             )
         out.writelines ('}')
 
@@ -340,7 +340,7 @@ class c_defined (nodes.c_defined):
     def emit_encode (self, out, dst, src):
         type_name, max_size = self.attrs
         out.writelines ('TYB_CHECK (encode_%s (%s, %s));' % (type_name, dst, src),)
-        
+
 
 class CBackend:
 
@@ -363,7 +363,7 @@ class CBackend:
             node.emit_decode (self.cout, 'dst', 'src')
             self.cout.writelines ('return 0;')
         self.cout.writelines ('}', '')
-        
+
     def gen_encoder (self, type_name, type_decl, node):
         # generate an encoder for a type assignment
         sig = 'int encode_%s (buf_t * dst, const %s_t * src)' % (type_name, type_name)
@@ -402,9 +402,6 @@ class CBackend:
             '#include <string.h>',
             '#include "tinyber.h"',
             '',
-            '#define TYB_FAILIF(x) do { if (x) { return -1; } } while(0)',
-            '#define TYB_CHECK(x) TYB_FAILIF(-1 == (x))',
-            ''
         )
         self.cout.writelines (
             '',

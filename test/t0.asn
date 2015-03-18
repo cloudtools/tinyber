@@ -3,13 +3,13 @@
 -- test module meant to exercise all supported features of tinyber_gen.py
 
 ThingModule DEFINITIONS ::= BEGIN
-    
+
     StringThing ::= OCTET STRING SIZE (5)
-    
+
     ThingMsg ::= CHOICE {
         msg-a  [0] MsgA,
 	msg-b  [1] MsgB,
-        msg-c  [2] MsgC
+        msg-c  [50] MsgC
     }
 
     Pair ::= SEQUENCE {

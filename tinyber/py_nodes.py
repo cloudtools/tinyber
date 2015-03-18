@@ -47,7 +47,7 @@ class c_sequence (nodes.c_sequence):
     def emit_decode (self, out):
         name, slots = self.attrs
         types = self.subs
-        out.writelines ('src = src.next (TAG.SEQUENCE)')
+        out.writelines ('src = src.next (TAG.SEQUENCE, FLAG.STRUCTURED)')
         for i in range (len (slots)):
             slot_name = slots[i]
             slot_type = types[i]
@@ -73,7 +73,7 @@ class c_sequence_of (nodes.c_sequence_of):
         min_size, max_size, = self.attrs
         [seq_type] = self.subs
         out.writelines (
-            'src, save = src.next (TAG.SEQUENCE), src',
+            'src, save = src.next (TAG.SEQUENCE, FLAG.STRUCTURED), src',
             'a = []',
             'while not src.done():'
             )
@@ -109,7 +109,7 @@ class c_set_of (nodes.c_sequence_of):
         min_size, max_size, = self.attrs
         [item_type] = self.subs
         out.writelines (
-            'src, save = src.next (TAG.SET), src',
+            'src, save = src.next (TAG.SET, FLAG.STRUCTURED), src',
             'a = set()',
             'while not src.done():'
             )
@@ -143,7 +143,7 @@ class c_choice (nodes.c_choice):
             pairs.append ((types[i].name(), tags[i]))
         out.writelines ('tags_f = {%s}' % (', '.join (('%s:%s' % (x[0], x[1]) for x in pairs))))
         out.writelines ('tags_r = {%s}' % (', '.join (('%s:%s' % (x[1], x[0]) for x in pairs))))
-        
+
 class c_enumerated (nodes.c_enumerated):
 
     def emit (self, out):
@@ -190,7 +190,7 @@ class PythonBackend:
             node.emit_decode (self.out)
             # this line is unecessary (but harmless) on normal defined sequence types
             self.out.writelines ('self.value = v')
-        
+
     def gen_encoder (self, type_name, type_decl, node):
         # generate an encoder for a type assignment
         self.out.writelines ('def _encode (self, dst):')
@@ -235,4 +235,3 @@ class PythonBackend:
                 self.gen_codec_funs (type_name, type_decl, node)
         self.out.close()
 
-        

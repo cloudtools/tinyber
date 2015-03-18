@@ -35,4 +35,3 @@ def try_decode (bytes pkt):
             return r
     else:
         return r
-    

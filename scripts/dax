@@ -1,0 +1,8 @@
+#!/usr/bin/env python
+# -*- Mode: Python -*-
+import sys
+from subprocess import Popen, PIPE, STDOUT
+import subprocess
+for arg in sys.argv[1:]:
+    p = Popen (['dumpasn1', '-'], stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    print p.communicate (input=arg.decode ('hex'))[0]

@@ -169,12 +169,12 @@ test_encoder (void)
   CHECK (encode_OCTET_STRING (&obuf, (uint8_t *) "ghi", 3));
   CHECK (encode_OCTET_STRING (&obuf, (uint8_t *) "def", 3));
   CHECK (encode_OCTET_STRING (&obuf, (uint8_t *) "abc", 3));
-  CHECK (encode_TLV (&obuf, mark0, TAG_SEQUENCE));
+  CHECK (encode_TLV (&obuf, mark0, TAG_SEQUENCE, FLAG_STRUCTURED));
 
   n = -3141;
   CHECK (encode_BOOLEAN (&obuf, &q));
   CHECK (encode_INTEGER (&obuf, &n));
-  CHECK (encode_TLV (&obuf, mark, TAG_SEQUENCE));
+  CHECK (encode_TLV (&obuf, mark, TAG_SEQUENCE, FLAG_STRUCTURED));
 
   int length = mark - obuf.pos;
   fprintf (stderr, "length=%d\n", length);

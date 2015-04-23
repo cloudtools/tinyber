@@ -124,28 +124,33 @@ Code Generation
 
 Included is a code generator, ``tinyber_gen.py``, which can generate
 type definitions and BER encoders/decoders for a limited subset of the
-ASN.1 specification language (X.680).
+ASN.1 specification language (X.680) in C and Python.
 
-    usage: tinyber_gen.py [-h] [-o OUTDIR] FILE
-    
-    tinyber code generator.
-    
-    positional arguments:
-      FILE                  asn.1 spec
-    
-    optional arguments:
-      -h, --help            show this help message and exit
-      -o OUTDIR, --outdir OUTDIR
-                            output directory (defaults to location of input file)
+```text
+usage: tinyber_gen [-h] [-o OUTDIR] [-l LANG] [-ns] FILE
 
+tinyber ASN.1 BER/DER code generator.
+
+positional arguments:
+  FILE                  asn.1 spec
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUTDIR, --outdir OUTDIR
+                        output directory (defaults to location of input file)
+  -l LANG, --lang LANG  output language ('c' or 'python')
+  -ns, --no-standalone  [python only] do not insert codec.py into output file.
+```
 
 For example::
 
-    beast:tinyber rushing$ python tinyber_gen.py thing.asn1
+```bash
+    beast:tinyber rushing$ python tinyber_gen.py -l c thing.asn1
     beast:tinyber rushing$ ls -l thing.[ch]
     -rw-r--r--  1 rushing  staff  20240 Jan 20 13:08 thing.c
     -rw-r--r--  1 rushing  staff   4939 Jan 20 13:08 thing.h
     beast:tinyber rushing$
+```
 
 
 The code generator requires the
@@ -163,14 +168,13 @@ encoders and decoders on both sides.  If you use two different PDU's, you will
 get only the encoders and decoders needed for each side.  For example::
 
     ThingModule DEFINITIONS ::= BEGIN
-    
+
       ThingClientMessage ::= CHOICE {
         login-request  [0] LoginRequest,
         status-request [1] StatusRequest,
 	  }
-	  
+
       ThingServerMessage ::= CHOICE {
           login-reply  [0] LoginReply,
           status-reply [1] StatusReply
       }
-

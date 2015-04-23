@@ -121,7 +121,7 @@ decode_bytes (uint8_t * data, int length)
   asn1raw_t dst;
   fprintf (stderr, "decode ");
   dump_hex (data, length);
-  fprintf (stderr, "\n");  
+  fprintf (stderr, "\n");
   int r = decode_TLV (&dst, &src);
   if (r) {
     fprintf (stderr, "\n *** error decoding at position %d ***\n\n", src.pos);
@@ -142,6 +142,9 @@ test_decoder (void)
   decode_bytes (data1, sizeof(data1));
   uint8_t data2[] = "\x30\x11\x02\x04\xff\x61\x63\x39\x30\x09\x02\x01\x00\x01\x01\x00\x02\x01\x02";
   decode_bytes (data2, sizeof(data2));
+  // test zero-length boolean.
+  uint8_t data3[] = "\x30\x06\x01\x00\x02\x02\x0c\x45";
+  decode_bytes (data3, sizeof(data3));
   return 0;
 }
 
@@ -156,7 +159,7 @@ test_encoder (void)
   init_obuf (&obuf, buffer, sizeof(buffer));
 
   memset (buffer, 0, sizeof(buffer));
-  
+
   // [-3141, False, ['abc', 'def', 'ghi'], 3735928559, 'Mary had a little lamb. I ate it with a mint sauce.']
 
   n = 0xdeadbeef;

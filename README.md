@@ -25,7 +25,7 @@ A simple ``buf_t`` structure is used for both input and output::
       uint8_t * buffer;
       unsigned int pos;
       unsigned int size;
-      } buf_t;
+    } buf_t;
 ```
 
 Encoding

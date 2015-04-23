@@ -339,5 +339,9 @@ decode_INTEGER (asn1raw_t * src)
 int
 decode_BOOLEAN (asn1raw_t * src)
 {
-  return (src->value[0] == 0xff);
+  if (src->length == 0) {
+    return 0;
+  } else {
+    return (src->value[0] == 0xff);
+  }
 }

@@ -20,11 +20,13 @@ Buffers
 
 A simple ``buf_t`` structure is used for both input and output::
 
+```c
     typedef struct {
       uint8_t * buffer;
       unsigned int pos;
       unsigned int size;
-    } buf_t;
+      } buf_t;
+```
 
 Encoding
 --------
@@ -37,11 +39,13 @@ do so in reverse.
 
 For example, to encode a SEQUENCE of objects there are three steps::
 
+```c
     int mark0 = obuf.pos;
     CHECK (encode_OCTET_STRING (&obuf, (uint8_t *) "ghi", 3));
     CHECK (encode_OCTET_STRING (&obuf, (uint8_t *) "def", 3));
     CHECK (encode_OCTET_STRING (&obuf, (uint8_t *) "abc", 3));
     CHECK (encode_TLV (&obuf, mark0, TAG_SEQUENCE));
+```
 
 1. Remember the stream's position (record the value of obuf.pos).
 2. Encode each item of the SEQUENCE in reverse.
@@ -58,10 +62,12 @@ Decoding
 When decoding an object, first call ``decode_TLV()`` to get the type,
 length, and value pointers to the object::
 
+```c
     buf_t src;
     init_ibuf (&src, data, length);
     asn1raw dst;
     int r = decode_TLV (&dst, &src);
+```
 
 Now examine the type tag - if it is the expected type, then you may
 further decode the value.  If the value itself makes up a more complex
@@ -69,19 +75,23 @@ structure, continue the procedure recursively.
 
 A simple utility structure, ``asn1raw`` is used to represent a TLV::
 
+```c
     typedef struct {
       uint8_t type;
       int length;
       uint8_t * value;
-    } asn1raw;
+      } asn1raw;
+```
 
 To decode a 'structured' element (i.e., a SEQUENCE or SET), create an
 array of ``asn1raw`` objects, and pass it to ``decode_structured()``::
 
+```c
     asn1raw subs[50];
     int n = 50;
     int i;
     CHECK (decode_structured (ob, &subs[0], &n));
+```
 
 In this example we allow up to 50 sub-elements.  If more are present
 in the stream an error will be returned.  If there are less than 50
@@ -110,10 +120,12 @@ Because tinyber requires fixed-sized elements for all structures (to
 avoid malloc & free), using recursive (or mutually recursive) types is
 impossible::
 
+```asn1
     List ::= SEQUENCE {
         car INTEGER,
 	    cdr List OPTIONAL
     }
+```
 
 Tinyber can't make a fixed-sized structure that might hold a
 potentially infinite list, so it cannot handle this kind of
@@ -167,6 +179,7 @@ the outermost CHOICE PDU will force the inclusion of both server and client
 encoders and decoders on both sides.  If you use two different PDU's, you will
 get only the encoders and decoders needed for each side.  For example::
 
+```asn1
     ThingModule DEFINITIONS ::= BEGIN
 
       ThingClientMessage ::= CHOICE {
@@ -178,3 +191,4 @@ get only the encoders and decoders needed for each side.  For example::
           login-reply  [0] LoginReply,
           status-reply [1] StatusReply
       }
+```

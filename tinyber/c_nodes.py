@@ -293,9 +293,9 @@ class c_enumerated (nodes.c_enumerated):
         with out.indent():
             for name, val in alts:
                 if val is not None:
-                    out.writelines ('%s%s = %s,' % (prefix, name, val))
+                    out.writelines ('%s%s = %s,' % (prefix, csafe (name), val))
                 else:
-                    out.writelines ('%s%s,' % (prefix, name,))
+                    out.writelines ('%s%s,' % (prefix, csafe (name)))
         out.write ('}')
 
     def emit_decode (self, out, lval, src):

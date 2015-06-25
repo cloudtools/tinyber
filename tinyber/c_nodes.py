@@ -13,7 +13,7 @@ def int_max_size_type (min_size, max_size):
         # unconstrained int type.
         return 'asn1int_t'
 
-    # compensate for 2-complement negative numbers
+    # compensate for 2's-complement negative numbers
     min_compare = min_size + 1 if min_size < 0 else min_size
     max_compare = max_size + 1 if max_size < 0 else max_size
     signed = min_size < 0 or max_size < 0

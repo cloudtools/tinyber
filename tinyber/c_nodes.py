@@ -8,20 +8,35 @@ import sys
 def csafe (s):
     return s.replace ('-', '_')
 
-def int_max_size_type ( max_size):
+def int_max_size_type (min_size, max_size):
     if max_size is None:
         # unconstrained int type.
         return 'asn1int_t'
-    elif max_size < 2**8:
-        return 'uint8_t'
-    elif max_size < 2**16:
-        return 'uint16_t'
-    elif max_size < 2**32:
-        return 'uint32_t'
-    elif max_size < 2**64:
-        return 'uint64_t'
+
+    # compensate for 2-complement negative numbers
+    min_compare = min_size + 1 if min_size < 0 else min_size
+    max_compare = max_size + 1 if max_size < 0 else max_size
+    signed = min_size < 0 or max_size < 0
+    compare = max(abs(min_compare), abs(max_compare))
+    if signed:
+        if compare < 2**7:
+            return 'int8_t'
+        elif compare < 2**15:
+            return 'int16_t'
+        elif compare < 2**31:
+            return 'int32_t'
+        elif compare < 2**63:
+            return 'int64_t'
     else:
-        raise NotImplementedError()
+        if compare < 2**8:
+            return 'uint8_t'
+        elif compare < 2**16:
+            return 'uint16_t'
+        elif compare < 2**32:
+            return 'uint32_t'
+        elif compare < 2**64:
+            return 'uint64_t'
+    raise NotImplementedError()
 
 class c_base_type (nodes.c_base_type):
 
@@ -38,7 +53,7 @@ class c_base_type (nodes.c_base_type):
         elif type_name == 'BOOLEAN':
             out.write ('asn1bool_t', True)
         elif type_name == 'INTEGER':
-            out.write (int_max_size_type (max_size), True)
+            out.write (int_max_size_type (min_size, max_size), True)
         elif type_name == 'NULL':
             pass
         else:

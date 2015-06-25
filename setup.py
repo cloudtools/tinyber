@@ -15,5 +15,6 @@ setup (
     description      = 'code generator for tinyber',
     scripts          = ['scripts/tinyber_gen', 'scripts/dax'],
     package_data     = {'tinyber': ['data/*.[ch]', 'tinyber/codec.py']},
-    ext_modules      = exts
+    ext_modules      = exts,
+    test_suite       = "tests",
     )

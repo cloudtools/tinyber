@@ -9,6 +9,13 @@ meant for use on embedded devices (or anywhere code size is
 restricted).  The generated code uses fixed-size structures and makes
 no calls to malloc or free.
 
+Install
+-------
+
+```shell
+$ sudo python setup.py install
+```
+
 Usage
 -----
 

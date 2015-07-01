@@ -173,7 +173,7 @@ For example::
 
 
 The code generator requires the
-[asn1ate(https://github.com/kimgr/asn1ate) package] to be installed.
+[asn1ate package](https://github.com/kimgr/asn1ate) to be installed.
 ``asn1ate`` is a parser for X.680 designed for use by code generators.
 
 

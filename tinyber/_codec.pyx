@@ -340,9 +340,8 @@ cdef class Encoder:
 
 class ASN1:
     value = None
-    def __init__ (self, **args):
-        for k, v in args.iteritems():
-            setattr (self, k, v)
+    def __init__ (self, value=None):
+        self.value = value
     def encode (self):
         cdef Encoder e = Encoder()
         self._encode (e)
@@ -355,6 +354,9 @@ class ASN1:
 
 class SEQUENCE (ASN1):
     __slots__ = ()
+    def __init__ (self, **args):
+        for k, v in args.iteritems():
+            setattr (self, k, v)
     def __repr__ (self):
         r = []
         for name in self.__slots__:

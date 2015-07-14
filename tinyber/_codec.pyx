@@ -9,28 +9,31 @@ from libc.stdint cimport uint32_t, uint8_t
 from cpython cimport PyBytes_FromStringAndSize
 from libc.string cimport memcpy
 
-class IndefiniteLength (Exception):
+class DecodingError (Exception):
     pass
 
-class ElementTooLarge (Exception):
+class IndefiniteLength (DecodingError):
     pass
 
-class Underflow (Exception):
+class ElementTooLarge (DecodingError):
     pass
 
-class UnexpectedType (Exception):
+class Underflow (DecodingError):
     pass
 
-class UnexpectedFlags (Exception):
+class UnexpectedType (DecodingError):
     pass
 
-class ConstraintViolation (Exception):
+class UnexpectedFlags (DecodingError):
     pass
 
-class BadChoice (Exception):
+class ConstraintViolation (DecodingError):
     pass
 
-class ExtraData (Exception):
+class BadChoice (DecodingError):
+    pass
+
+class ExtraData (DecodingError):
     pass
 
 # flags for BER tags

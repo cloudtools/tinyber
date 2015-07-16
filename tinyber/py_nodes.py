@@ -220,7 +220,7 @@ class PythonBackend:
             self.gen_encoder (type_name, type_decl, node)
 
     def generate_code (self):
-        self.out = Writer (open (self.base_path + '_ber.py', 'wb'), indent_size=4)
+        self.out = Writer (open (self.base_path + '_ber.py', 'w'), indent_size=4)
         command = os.path.basename(sys.argv[0])
         self.out.writelines (
             '# -*- Mode: Python -*-',
@@ -231,11 +231,14 @@ class PythonBackend:
         if self.args.no_standalone:
             self.out.writelines ('from tinyber.codec import *', '')
         else:
-            self.out.writelines ('# --- start codec.py ---', '')
             pkg_dir, _ = os.path.split (__file__)
-            for line in open (os.path.join (pkg_dir, 'codec.py'), 'rb'):
-                self.out.writelines (line[:-1])
+
+            self.out.writelines ('# --- start codec.py ---', '')
+            with open(os.path.join(pkg_dir, 'codec.py'), 'r') as infile:
+                for line in infile:
+                    self.out.writelines (line[:-1])
             self.out.writelines('', '# --- end codec.py ---')
+
         self.tag_assignments = self.walker.tag_assignments
         # generate typedefs and prototypes.
         for (type_name, node, type_decl) in self.walker.defined_types:

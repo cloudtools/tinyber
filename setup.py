@@ -17,4 +17,5 @@ setup (
     package_data     = {'tinyber': ['data/*.[ch]', 'tinyber/codec.py']},
     ext_modules      = exts,
     test_suite       = "tests",
+    use_2to3         = True,
     )

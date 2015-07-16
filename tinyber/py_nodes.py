@@ -8,14 +8,14 @@ import sys
 def psafe (s):
     return s.replace ('-', '_')
 
-def emit_choice(out, tag, pairs, reversed=False):
+def emit_pairs(out, tag, pairs, reversed=False):
     out.writelines('%s = {' % tag)
     with out.indent():
         for x in pairs:
             if reversed:
-                out.writelines("%s: '%s'," % (x[1], x[0]))
+                out.writelines("%s: %s," % (x[1], x[0]))
             else:
-                out.writelines("'%s': %s," % (x[0], x[1]))
+                out.writelines("%s: %s," % (x[0], x[1]))
     out.writelines('}')
 
 class c_base_type (nodes.c_base_type):
@@ -155,8 +155,8 @@ class c_choice (nodes.c_choice):
         pairs = []
         for i in range (len (slots)):
             pairs.append ((types[i].name(), tags[i]))
-        emit_choice(out, 'tags_f', pairs)
-        emit_choice(out, 'tags_r', pairs, reversed=True)
+        emit_pairs(out, 'tags_f', pairs)
+        emit_pairs(out, 'tags_r', pairs, reversed=True)
 
 class c_enumerated (nodes.c_enumerated):
 
@@ -164,9 +164,9 @@ class c_enumerated (nodes.c_enumerated):
         defname, alts, = self.attrs
         pairs = []
         for name, val in alts:
-            pairs.append ((name, val))
-        emit_choice(out, 'tags_f', pairs)
-        emit_choice(out, 'tags_r', pairs, reversed=True)
+            pairs.append (("'%s'" % name, val))
+        emit_pairs(out, 'tags_f', pairs)
+        emit_pairs(out, 'tags_r', pairs, reversed=True)
 
     parent_class = 'ENUMERATED'
     nodecoder = True

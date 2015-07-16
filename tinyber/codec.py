@@ -74,7 +74,10 @@ class Decoder:
         if self.pos + 1 > self.end:
             raise Underflow(self)
         else:
-            val = ord(self.data[self.pos])
+            try:
+                val = ord(self.data[self.pos])
+            except TypeError:
+                val = self.data[self.pos]
             self.pos += 1
             return val
 
@@ -222,38 +225,41 @@ class Encoder:
         self.r = []
         self.length = 0
 
+    def _chr(self, x):
+        return bytearray((x,))
+
     def emit(self, data):
         self.r.insert(0, data)
         self.length += len(data)
 
     def emit_length(self, n):
         if n < 0x80:
-            self.emit(chr(n))
+            self.emit(self._chr(n))
         else:
             r = []
             while n:
-                r.insert(0, chr(n & 0xff))
+                r.insert(0, self._chr(n & 0xff))
                 n >>= 8
-            r.insert(0, chr(0x80 | len(r)))
+            r.insert(0, self._chr(0x80 | len(r)))
             self.emit(''.join(r))
 
     def emit_tag(self, tag, flags=0):
         if tag < 0x1f:
-            self.emit(chr(tag | flags))
+            self.emit(self._chr(tag | flags))
         else:
             while tag:
                 if tag < 0x80:
-                    self.emit(chr(tag))
+                    self.emit(self._chr(tag))
                 else:
-                    self.emit(chr((tag & 0x7f) | 0x80))
+                    self.emit(self._chr((tag & 0x7f) | 0x80))
                 tag >>= 7
-            self.emit(chr(0x1f | flags))
+            self.emit(self._chr(0x1f | flags))
 
     def TLV(self, tag, flags=0):
         return EncoderContext(self, tag, flags)
 
     def done(self):
-        return ''.join(self.r)
+        return b''.join(self.r)
 
     # base types
 
@@ -269,19 +275,19 @@ class Encoder:
             if n0 == n:
                 if n == -1 and ((not byte & 0x80) or i == 0):
                     # negative, but high bit clear
-                    r.insert(0, chr(0xff))
+                    r.insert(0, self._chr(0xff))
                     i = i + 1
                 elif n == 0 and (byte & 0x80):
                     # positive, but high bit set
-                    r.insert(0, chr(0x00))
+                    r.insert(0, self._chr(0x00))
                     i = i + 1
                 break
             else:
                 byte = n0 & 0xff
-                r.insert(0, chr(byte))
+                r.insert(0, self._chr(byte))
                 i += 1
                 n0 = n
-        self.emit(''.join(r))
+        self.emit(b''.join(r))
 
     def emit_INTEGER(self, n):
         with self.TLV(TAG.INTEGER):

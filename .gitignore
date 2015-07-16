@@ -1,2 +1,7 @@
 build/
+dist/
+tests/gen_*_ber.py
+tinyber/_codec.c
 *.pyc
+*.egg-info
+*.swp

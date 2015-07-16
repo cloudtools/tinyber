@@ -199,3 +199,9 @@ get only the encoders and decoders needed for each side.  For example::
           status-reply [1] StatusReply
       }
 ```
+
+Licensing
+---------
+This software is licensed under the Apache 2 license. However, the output,
+which is included into other projects, is not encumbered with any license
+restrictions. See the LICENSE.txt for more details.

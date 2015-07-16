@@ -1,0 +1,14 @@
+TestChoice DEFINITIONS ::= BEGIN
+  Choice ::= CHOICE {
+      choice1 [0] Choice1,
+      choice2 [1] Choice2
+  }
+
+  Choice1 ::= SEQUENCE {
+      test1 INTEGER (0..255)
+  }
+
+  Choice2 ::= SEQUENCE {
+      test2 INTEGER (0..255)
+  }
+END

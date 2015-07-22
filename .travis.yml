@@ -11,7 +11,7 @@ install:
 before_script:
   - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then 2to3 -n -w --no-diffs tinyber; fi
   - pep8 --version
-  - pep8
+  - pep8 scripts tests tinyber
 
 script:
   - python setup.py test

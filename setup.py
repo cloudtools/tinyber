@@ -10,9 +10,11 @@ except ImportError:
     exts = []
 
 setup (
-    name             = 'tinyber_gen',
+    name             = 'tinyber',
+    version          = '0.0.1',
+    url              = "https://github.com/cloudtools/tinyber",
     packages         = find_packages(),
-    description      = 'code generator for tinyber',
+    description      = 'ASN.1 code generator for Python and C',
     scripts          = ['scripts/tinyber_gen', 'scripts/dax'],
     package_data     = {
         'tinyber': ['data/*.[ch]', 'tinyber/codec.py'],
@@ -21,4 +23,5 @@ setup (
     ext_modules      = exts,
     test_suite       = "tests",
     use_2to3         = True,
+    install_requires = ['asn1ate>=0.5', 'pyparsing>=2.0.0'],
     )

@@ -14,7 +14,10 @@ setup (
     packages         = find_packages(),
     description      = 'code generator for tinyber',
     scripts          = ['scripts/tinyber_gen', 'scripts/dax'],
-    package_data     = {'tinyber': ['data/*.[ch]', 'tinyber/codec.py']},
+    package_data     = {
+        'tinyber': ['data/*.[ch]', 'tinyber/codec.py'],
+        'tests': ['*.asn1'],
+    },
     ext_modules      = exts,
     test_suite       = "tests",
     use_2to3         = True,

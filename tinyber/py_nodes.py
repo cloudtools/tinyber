@@ -32,7 +32,8 @@ class c_base_type (nodes.c_base_type):
         elif type_name == 'BOOLEAN':
             out.writelines ('v = src.next_BOOLEAN()')
         else:
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
 
     def emit_encode (self, out, val):
         type_name, min_size, max_size = self.attrs
@@ -43,7 +44,8 @@ class c_base_type (nodes.c_base_type):
         elif type_name == 'BOOLEAN':
             out.writelines ('dst.emit_BOOLEAN(%s)' % (val,))
         else:
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
 
 class c_sequence (nodes.c_sequence):
 
@@ -51,7 +53,6 @@ class c_sequence (nodes.c_sequence):
 
     def emit (self, out):
         name, slots = self.attrs
-        types = self.subs
         out.writelines ('__slots__ = (')
         with out.indent():
             for x in slots:
@@ -90,7 +91,7 @@ class c_sequence_of (nodes.c_sequence_of):
             'src, save = src.next(TAG.SEQUENCE, FLAG.STRUCTURED), src',
             'a = []',
             'while not src.done():'
-            )
+        )
         with out.indent():
             seq_type.emit_decode (out)
             out.writelines ('a.append(v)')
@@ -126,7 +127,7 @@ class c_set_of (nodes.c_sequence_of):
             'src, save = src.next(TAG.SET, FLAG.STRUCTURED), src',
             'a = set()',
             'while not src.done():'
-            )
+        )
         with out.indent():
             item_type.emit_decode (out)
             out.writelines ('a.add (v)')
@@ -182,7 +183,7 @@ class c_defined (nodes.c_defined):
         out.writelines (
             'v = %s()' % (type_name,),
             'v._decode(src)',
-            )
+        )
 
     def emit_encode (self, out, val):
         type_name, max_size = self.attrs

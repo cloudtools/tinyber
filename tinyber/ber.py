@@ -20,7 +20,7 @@ def length_of_integer (n):
     while 1:
         n >>= 8
         if n0 == n:
-            if n == -1 and ((not byte & 0x80) or (i==0)):
+            if n == -1 and ((not byte & 0x80) or (i == 0)):
                 # negative, but high bit clear
                 r += 1
                 i += 1
@@ -35,4 +35,3 @@ def length_of_integer (n):
             i += 1
             n0 = n
     return r
-

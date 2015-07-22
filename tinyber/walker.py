@@ -1,6 +1,10 @@
 # -*- Mode: Python -*-
 
-from asn1ate.sema import *
+from asn1ate.sema import (
+    ChoiceType, ExtensionMarker, SequenceType, SetOfType, SizeConstraint,
+    SingleValueConstraint, TaggedType, ValueRangeConstraint, ValueListType,
+    dependency_sort
+)
 
 class Walker (object):
 
@@ -48,7 +52,7 @@ class Walker (object):
 
     def gen_TaggedType (self, ob):
         # XXX for now, only support [APPLICATION X] SEQUENCE {}
-        #assert (isinstance (ob.type_decl, SequenceType))
+        # assert (isinstance (ob.type_decl, SequenceType))
         raise NotImplementedError ('put your tags inside the SEQUENCE definition')
 
     def gen_TypeAssignment (self, ob):
@@ -110,4 +114,3 @@ class Walker (object):
         for component in assignment_components:
             for assignment in component:
                 self.gen_dispatch (assignment)
-

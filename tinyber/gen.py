@@ -2,10 +2,9 @@
 # -*- Mode: Python -*-
 
 import os
-import sys
 
 from asn1ate import parser
-from asn1ate.sema import *
+from asn1ate.sema import build_semantic_model
 from tinyber.walker import Walker
 
 def go (args):
@@ -46,5 +45,3 @@ def main():
     p.add_argument ('file', help="asn.1 spec", metavar="FILE")
     args = p.parse_args()
     go (args)
-
-    

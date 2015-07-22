@@ -44,7 +44,7 @@ class TestBasic(unittest.TestCase):
         size = "uint8_t"
         self.assertEqual(int_max_size_type(0, 0), size)
         self.assertEqual(int_max_size_type(0, 2**8 - 1), size)
-        #self.assertNotEqual(int_max_size_type(0, -1), size)
+        # self.assertNotEqual(int_max_size_type(0, -1), size)
         self.assertNotEqual(int_max_size_type(0, 2**8), size)
 
     def test_uint16(self):

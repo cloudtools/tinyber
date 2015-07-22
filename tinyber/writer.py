@@ -10,7 +10,7 @@ class IndentContext:
         if self.scope:
             self.writer.writelines ('{')
         self.writer.indent_level += 1
-        
+
     def __exit__ (self, t, v, tb):
         self.writer.indent_level -= 1
         if self.scope:
@@ -28,7 +28,7 @@ class Writer:
 
     def scope (self):
         return IndentContext (self, True)
-        
+
     def writelines (self, *lines):
         for line in lines:
             self.stream.write (self.base_indent * self.indent_level)

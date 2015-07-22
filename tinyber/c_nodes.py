@@ -48,7 +48,7 @@ class c_base_type (nodes.c_base_type):
                 out.writelines (
                     'uint8_t val[%s];' % (max_size,),
                     'int len;'
-                    )
+                )
             out.write ('}', True)
         elif type_name == 'BOOLEAN':
             out.write ('asn1bool_t', True)
@@ -57,7 +57,8 @@ class c_base_type (nodes.c_base_type):
         elif type_name == 'NULL':
             pass
         else:
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
 
     def emit_decode (self, out, lval, src):
         type_name, min_size, max_size = self.attrs
@@ -70,7 +71,7 @@ class c_base_type (nodes.c_base_type):
                 'TYB_FAILIF(tlv.length > %d);' % (max_size,),
                 'memcpy ((*%s).val, tlv.value, tlv.length);' % (lval,),
                 '(*%s).len = tlv.length;' % (lval,),
-                )
+            )
         elif type_name == 'INTEGER':
             with out.scope():
                 out.writelines ('asn1int_t intval = decode_INTEGER (&tlv);',)
@@ -84,7 +85,8 @@ class c_base_type (nodes.c_base_type):
         elif type_name == 'NULL':
             pass
         else:
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
 
     def emit_encode (self, out, dst, src):
         type_name, min_size, max_size = self.attrs
@@ -105,7 +107,8 @@ class c_base_type (nodes.c_base_type):
         elif type_name == 'NULL':
             out.writelines ('encode_NULL (%s)' % (dst,))
         else:
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
 
 class c_sequence (nodes.c_sequence):
 
@@ -252,7 +255,7 @@ class c_choice (nodes.c_choice):
                 'TYB_CHECK (decode_TLV (&tlv, %s));' % (src,),
                 'init_ibuf (&src0, tlv.value, tlv.length);',
                 'switch (tlv.type) {',
-                )
+            )
             with out.indent():
                 for i in range (len (slots)):
                     type_name = types[i].name()

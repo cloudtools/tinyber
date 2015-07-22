@@ -27,7 +27,7 @@ class c_base_type (c_node):
 
     def __init__ (self, name, min_size=None, max_size=None):
         c_node.__init__ (self, 'base_type', (name, min_size, max_size), [])
-        
+
     def max_size (self):
         type_name, min_size, max_size = self.attrs
         if type_name == 'OCTET STRING' or type_name == 'UTF8String':
@@ -43,14 +43,15 @@ class c_base_type (c_node):
         elif type_name == 'NULL':
             return 2
         else:
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
 
     tag_map = {
-        'OCTET STRING' : 'TAG_OCTETSTRING',
-        'UTF8String' : 'TAG_UTF8STRING',
-        'INTEGER' : 'TAG_INTEGER',
-        'BOOLEAN' : 'TAG_BOOLEAN',
-        'NULL' : 'TAG_NULL',
+        'OCTET STRING': 'TAG_OCTETSTRING',
+        'UTF8String': 'TAG_UTF8STRING',
+        'INTEGER': 'TAG_INTEGER',
+        'BOOLEAN': 'TAG_BOOLEAN',
+        'NULL': 'TAG_NULL',
     }
 
     def tag_name (self):
@@ -85,7 +86,7 @@ class c_sequence_of (c_node):
 class c_set_of (c_node):
 
     def __init__ (self, item_type, min_size, max_size):
-        c_node.__init__ (self, 'set_of', (min_size, max_size,), [seq_type])
+        c_node.__init__ (self, 'set_of', (min_size, max_size,), [item_type])
 
     def max_size (self):
         min_size, max_size, = self.attrs
@@ -133,4 +134,3 @@ class c_defined (c_node):
     def max_size (self):
         name, max_size = self.attrs
         return max_size
-        

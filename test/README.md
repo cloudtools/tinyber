@@ -34,9 +34,11 @@ Usage
 Demo
 ----
 
-The file 'test.c' is a sample of a hand-written encoding & decoding.
+The file 'handwritten.c' is a sample of a hand-written encoding & decoding.
 To build it:
 
 ```bash
-$ gcc -O3 -I ../tinyber/data/ test.c ../tinyber/data/tinyber.c -o test
+$ gcc -O3 -I ../tinyber/data/ handwritten.c ../tinyber/data/tinyber.c -o handwritten
 ```
+
+or just ``make test``.

@@ -1,4 +1,10 @@
 
+NOTE
+----
+
+This test suite is in the middle of being modified so that it can run under the
+standard unittest suite and moved to ``../tests``.
+
 The Tests
 ---------
 

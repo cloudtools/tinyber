@@ -241,7 +241,7 @@ class Encoder:
                 r.insert(0, self._chr(n & 0xff))
                 n >>= 8
             r.insert(0, self._chr(0x80 | len(r)))
-            self.emit(''.join(r))
+            self.emit(bytearray().join(r))
 
     def emit_tag(self, tag, flags=0):
         if tag < 0x1f:
@@ -259,7 +259,7 @@ class Encoder:
         return EncoderContext(self, tag, flags)
 
     def done(self):
-        return b''.join(self.r)
+        return bytearray().join(self.r)
 
     # base types
 
@@ -287,7 +287,7 @@ class Encoder:
                 r.insert(0, self._chr(byte))
                 i += 1
                 n0 = n
-        self.emit(b''.join(r))
+        self.emit(bytearray().join(r))
 
     def emit_INTEGER(self, n):
         with self.TLV(TAG.INTEGER):

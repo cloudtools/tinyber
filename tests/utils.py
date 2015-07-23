@@ -11,8 +11,6 @@ def generate(infilename, outfilename):
         no_standalone = False
 
     import os
-    print(os.path.realpath(infilename))
-    print(os.path.realpath(outfilename))
     with open(infilename) as f:
         asn1def = f.read()
 

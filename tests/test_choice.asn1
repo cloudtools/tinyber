@@ -5,7 +5,8 @@ TestChoice DEFINITIONS ::= BEGIN
   }
 
   Choice1 ::= SEQUENCE {
-      test1 INTEGER (0..255)
+      test1 INTEGER (0..255),
+      str1 OCTET STRING SIZE (0..129)
   }
 
   Choice2 ::= SEQUENCE {

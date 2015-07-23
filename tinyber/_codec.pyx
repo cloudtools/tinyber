@@ -258,7 +258,7 @@ cdef class Encoder:
         while (self.pos + n) > self.size:
             self.grow()
 
-    cdef emit (self, bytes s):
+    cdef emit (self, bytearray s):
         cdef unsigned int slen = len(s)
         cdef unsigned char * pbuf = self.buffer
         cdef unsigned char * ps = s
@@ -337,9 +337,9 @@ cdef class Encoder:
     cpdef emit_BOOLEAN (self, v):
         with self.TLV (TAGS_BOOLEAN):
             if v:
-                self.emit (b'\xff')
+                self.emit_byte (b'\xff')
             else:
-                self.emit (b'\x00')
+                self.emit_byte (b'\x00')
 
 class ASN1:
     value = None

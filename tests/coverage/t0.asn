@@ -1,6 +1,6 @@
 -- -*- Mode: asn1; indent-tabs-mode: nil -*-
 
--- test module meant to exercise all supported features of tinyber_gen.py
+-- test module meant to exercise all supported features of tinyber's code generators.
 
 ThingModule DEFINITIONS ::= BEGIN
 

@@ -365,7 +365,7 @@ class CBackend:
     def __init__ (self, args, walker, module_name, path):
         self.args = args
         self.walker = walker
-        self.module_name = module_name
+        _, self.module_name = os.path.split (module_name)
         self.path = path
         self.base_path = os.path.join(path, module_name)
 

@@ -1,6 +1,5 @@
 
 from coro.asn1.ber import *
-from t0_test import try_decode
 
 # this will auto-generate test cases - both good and bad ones - to exhaustively
 #  cover the tinyber codec generated for t0.asn.

@@ -4,7 +4,7 @@
 
 from coro.asn1.ber import *
 from t0_ber import ThingMsg
-from t0_gen_test import gen_thingmsg
+from t0_gen_cases import gen_thingmsg
 
 def try_decode (val):
     try:

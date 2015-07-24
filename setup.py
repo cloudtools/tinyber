@@ -17,8 +17,8 @@ setup (
     description      = 'ASN.1 code generator for Python and C',
     scripts          = ['scripts/tinyber_gen', 'scripts/dax'],
     package_data     = {
-        'tinyber': ['data/*.[ch]', 'tinyber/codec.py'],
-        'tests': ['*.asn1'],
+        'tinyber': ['data/*.[ch]', 'tinyber/codec.py',],
+        'tests': ['*.asn1', 'coverage/t0_wrap.pyx'],
     },
     ext_modules      = exts,
     test_suite       = "tests",

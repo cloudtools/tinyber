@@ -41,6 +41,9 @@ class ExtraData(DecodingError):
     pass
 
 
+class BadEnum(DecodingError):
+    pass
+
 class FLAG:
     UNIVERSAL = 0x00
     STRUCTURED = 0x20
@@ -295,7 +298,7 @@ class Encoder:
 
     def emit_OCTET_STRING(self, s):
         with self.TLV(TAG.OCTETSTRING):
-            self.emit(s)
+            self.emit(bytearray(s))
 
     def emit_BOOLEAN(self, v):
         with self.TLV(TAG.BOOLEAN):
@@ -320,6 +323,12 @@ class ASN1:
         b = Decoder(data)
         self._decode(b)
 
+    def __eq__ (self, other):
+        return self.value == other.value
+
+    def __ne__ (self, other):
+        return not self.__eq__ (other)
+
     def __repr__(self):
         return '<%s %r>' % (self.__class__.__name__, self.value)
 
@@ -330,6 +339,12 @@ class SEQUENCE(ASN1):
     def __init__(self, **args):
         for k, v in args.iteritems():
             setattr(self, k, v)
+
+    def __eq__ (self, other):
+        for name in self.__slots__:
+            if getattr (self, name) != getattr (other, name):
+                return False
+        return True
 
     def __repr__(self):
         r = []
@@ -363,11 +378,17 @@ class ENUMERATED(ASN1):
 
     def _decode(self, src):
         v = src.next_ENUMERATED()
-        self.value = self.tags_r[v]
+        try:
+            self.value = self.tags_r[v]
+        except KeyError:
+            raise BadEnum (v)
 
     def _encode(self, dst):
         with dst.TLV(TAG.ENUMERATED):
-            dst.emit_integer(self.tags_f[self.value])
+            try:
+                dst.emit_integer(self.tags_f[self.value])
+            except KeyError:
+                raise BadEnum (self.value)
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.value)

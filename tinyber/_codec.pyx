@@ -36,6 +36,9 @@ class BadChoice (DecodingError):
 class ExtraData (DecodingError):
     pass
 
+class BadEnum (DecodingError):
+    pass
+
 # flags for BER tags
 cdef enum FLAGS:
     FLAGS_UNIVERSAL       = 0x00
@@ -332,7 +335,7 @@ cdef class Encoder:
 
     cpdef emit_OCTET_STRING (self, s):
         with self.TLV (TAGS_OCTET_STRING):
-            self.emit (s)
+            self.emit (bytearray(s))
 
     cpdef emit_BOOLEAN (self, v):
         with self.TLV (TAGS_BOOLEAN):
@@ -352,6 +355,10 @@ class ASN1:
     def decode (self, data):
         b = Decoder (data)
         self._decode (b)
+    def __eq__ (self, other):
+        return isinstance (other, self.__class__) and self.value == other.value
+    def __ne__ (self, other):
+        return not self.__eq__ (other)
     def __repr__ (self):
         return '<%s %r>' % (self.__class__.__name__, self.value)
 
@@ -360,6 +367,15 @@ class SEQUENCE (ASN1):
     def __init__ (self, **args):
         for k, v in args.iteritems():
             setattr (self, k, v)
+    def __eq__ (self, other):
+        if not isinstance (other, self.__class__):
+            return False
+        else:
+            for name in self.__slots__:
+                if getattr (self, name) != getattr (other, name):
+                    print 'slot __eq__ issue', name, getattr (self, name), getattr (other, name)
+                    return False
+            return True
     def __repr__ (self):
         r = []
         for name in self.__slots__:
@@ -389,9 +405,15 @@ class ENUMERATED (ASN1):
     value = 'NoValueDefined'
     def _decode (self, Decoder src):
         v = src.next_ENUMERATED()
-        self.value = self.tags_r[v]
+        try:
+            self.value = self.tags_r[v]
+        except KeyError:
+            raise BadEnum (v)
     def _encode (self, Encoder dst):
         with dst.TLV (TAGS_ENUMERATED):
-            dst.emit_integer (self.tags_f[self.value])
+            try:
+                dst.emit_integer(self.tags_f[self.value])
+            except KeyError:
+                raise BadEnum (self.value)
     def __repr__ (self):
         return '<%s %s>' % (self.__class__.__name__, self.value)

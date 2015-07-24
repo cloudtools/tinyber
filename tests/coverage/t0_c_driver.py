@@ -6,6 +6,7 @@ import unittest
 
 from coro.asn1.ber import *
 from tests.coverage.t0_gen_cases import gen_thingmsg
+from tests.utils import test_reload
 
 class ExpectedGood (Exception):
     pass
@@ -18,6 +19,7 @@ class TestBasic(unittest.TestCase):
 
     def test_c_coverage (self):
         # this is disgusting, but "from tests.coverage.t0_wrap" does not work here.
+        test_reload()
         import sys
         sys.path.append ('tests/coverage')
         from t0_wrap import try_decode

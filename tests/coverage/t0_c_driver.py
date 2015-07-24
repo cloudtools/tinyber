@@ -7,6 +7,7 @@ import unittest
 from coro.asn1.ber import *
 from tests.coverage.t0_gen_cases import gen_thingmsg
 from tests.utils import test_reload
+from tests.utils import generate_c
 
 class ExpectedGood (Exception):
     pass
@@ -16,6 +17,17 @@ class BadEncoding (Exception):
     pass
 
 class TestBasic(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        import os
+        generate_c ('tests/coverage/t0.asn', 't0', 'tests/coverage')
+        from distutils.core import run_setup
+        run_setup ('tests/coverage/setup.py', ['build_ext', '--inplace'])
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
 
     def test_c_coverage (self):
         # this is disgusting, but "from tests.coverage.t0_wrap" does not work here.

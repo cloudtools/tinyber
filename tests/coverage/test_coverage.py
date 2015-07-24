@@ -23,7 +23,7 @@ class TestCoverage (unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import os
-        generate_c ('tests/coverage/t0.asn', 'tests/coverage/t0', '.')
+        generate_c ('tests/coverage/t0.asn', 't0', 'tests/coverage')
         from distutils.core import run_setup
         run_setup ('tests/coverage/setup.py', ['build_ext', '--inplace'])
         # ARRGGGHGHGHHHHHHHHHH

@@ -118,6 +118,7 @@ class TestEncoder(unittest.TestCase):
         raise NoError
 
     def test_round_trip (self):
+        test_reload()
         # all generators, simplest to the most complex
         gens = [gen_pair, gen_color, gen_msgc, gen_msgb, gen_msga, gen_thingmsg]
         n = 0

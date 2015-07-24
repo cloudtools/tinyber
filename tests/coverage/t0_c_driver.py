@@ -6,8 +6,7 @@ import unittest
 
 from coro.asn1.ber import *
 from tests.coverage.t0_gen_cases import gen_thingmsg
-from tests.utils import test_reload
-from tests.utils import generate_c
+from tests.utils import test_reload, generate_c
 
 class ExpectedGood (Exception):
     pass

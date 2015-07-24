@@ -6,6 +6,7 @@
 #  this test suite will need slight tweaking once that is added.
 
 import unittest
+from tests.utils import test_reload, generate_c
 from t0_ber import *
 
 class NoError (Exception):
@@ -95,6 +96,17 @@ def gen_thingmsg():
         yield (error, ThingMsg (msgc))
 
 class TestEncoder(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        import os
+        generate_c ('tests/coverage/t0.asn', 't0', 'tests/coverage')
+        from distutils.core import run_setup
+        run_setup ('tests/coverage/setup.py', ['build_ext', '--inplace'])
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
 
     # the codec does not currently check constraints in the *encoder*,
     #   so to verify contraint checking we do a round trip.

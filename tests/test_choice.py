@@ -7,13 +7,13 @@ from tinyber.walker import Walker
 from tinyber.py_nodes import PythonBackend as Backend
 from tinyber import py_nodes as nodes
 
-from tests.utils import generate, test_reload
+from tests.utils import generate_py, test_reload
 
 
 class TestBasic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        generate("tests/test_choice.asn1", "gen_choice")
+        generate_py("tests/test_choice.asn1", "gen_choice", 'tests')
 
     @classmethod
     def tearDownClass(cls):

@@ -97,17 +97,6 @@ def gen_thingmsg():
 
 class TestEncoder(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        import os
-        generate_c ('tests/coverage/t0.asn', 't0', 'tests/coverage')
-        from distutils.core import run_setup
-        run_setup ('tests/coverage/setup.py', ['build_ext', '--inplace'])
-
-    @classmethod
-    def tearDownClass(cls):
-        pass
-
     # the codec does not currently check constraints in the *encoder*,
     #   so to verify contraint checking we do a round trip.
     def round_trip (self, ob):

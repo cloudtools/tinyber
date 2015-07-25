@@ -17,17 +17,6 @@ class BadEncoding (Exception):
 
 class TestBasic(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        import os
-        generate_c ('tests/coverage/t0.asn', 't0', 'tests/coverage')
-        from distutils.core import run_setup
-        run_setup ('tests/coverage/setup.py', ['build_ext', '--inplace'])
-
-    @classmethod
-    def tearDownClass(cls):
-        pass
-
     def test_c_coverage (self):
         # this is disgusting, but "from tests.coverage.t0_wrap" does not work here.
         test_reload()

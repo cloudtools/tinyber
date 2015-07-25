@@ -7,6 +7,13 @@
 
 import unittest
 from tests.utils import test_reload, generate_c
+
+import sys
+sys.path.append ('tests/coverage')
+
+import t0_ber
+print t0_ber.__file__
+
 from t0_ber import *
 
 class NoError (Exception):

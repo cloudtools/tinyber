@@ -6,7 +6,7 @@ from tinyber.py_nodes import PythonBackend as Backend
 from tinyber import py_nodes as nodes
 
 
-def generate(infilename, outfilename):
+def generate_py(infilename, outfilename, path):
     class FakeArgs(object):
         no_standalone = False
 
@@ -19,7 +19,6 @@ def generate(infilename, outfilename):
     assert (len(modules) == 1)
 
     module_name = outfilename
-    path = "tests"
     args = FakeArgs()
 
     # pull in the python-specific node implementations

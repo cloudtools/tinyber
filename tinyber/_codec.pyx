@@ -373,7 +373,6 @@ class SEQUENCE (ASN1):
         else:
             for name in self.__slots__:
                 if getattr (self, name) != getattr (other, name):
-                    print 'slot __eq__ issue', name, getattr (self, name), getattr (other, name)
                     return False
             return True
     def __repr__ (self):

@@ -174,11 +174,10 @@ cdef class Decoder:
             if n & 0x80:
                 # negative
                 n -= 0x100
-            else:
-                while length:
-                    n = n << 8 | self.pop_byte()
-                    length -= 1
-                return n
+            while length:
+                n = n << 8 | self.pop_byte()
+                length -= 1
+            return n
 
     def next_INTEGER (self, min_val, max_val):
         self.check (TAGS_INTEGER)

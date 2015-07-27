@@ -8,8 +8,9 @@ ThingModule DEFINITIONS ::= BEGIN
 
     ThingMsg ::= CHOICE {
         msg-a  [0] MsgA,
-	msg-b  [1] MsgB,
-        msg-c  [50] MsgC
+        msg-b  [1] MsgB,
+        msg-c  [50] MsgC,
+        msg-d  [2] MsgD
     }
 
     Pair ::= SEQUENCE {
@@ -46,5 +47,10 @@ ThingModule DEFINITIONS ::= BEGIN
 	tbool BOOLEAN
     }
 
+    MsgD ::= SEQUENCE {
+        -- test negative ranges --
+        x INTEGER (-10..10),
+        y INTEGER (-10..-5)
+    }
 
 END

@@ -4,7 +4,6 @@
 
 import unittest
 
-from coro.asn1.ber import *
 from tests.coverage.t0_gen_cases import gen_thingmsg
 from tests.utils import test_reload, generate_c
 
@@ -30,7 +29,7 @@ class TestBasic(unittest.TestCase):
                 # it should have been bad, but wasn't.
                 self.assertEqual (r, -1)
             else:
-                self.assertNotEqual (r, -1)
+                self.assertNotEqual (r, -1, msg=tval)
                 self.assertEqual (r, tval)
 
 if __name__ == '__main__':

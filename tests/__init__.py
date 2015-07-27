@@ -1,1 +1,2 @@
-import coverage
+# -*- Mode: Python -*-
+
